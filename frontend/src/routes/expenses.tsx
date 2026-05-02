@@ -14,6 +14,7 @@ import { Plus, Trash2, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 import { formatTHB, formatDate } from "@/utils/format";
 import { getExpenses, createExpense, deleteExpense } from "@/lib/services";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 
 export const Route = createFileRoute("/expenses")({
   component: () => (<ProtectedRoute><AppLayout><Expenses /></AppLayout></ProtectedRoute>),
@@ -41,7 +42,6 @@ function Expenses() {
   const total = rows.reduce((a, e) => a + Number(e.amount), 0);
 
   const remove = async (id: string) => { 
-    if (!confirm("คุณแน่ใจหรือไม่ว่าต้องการลบรายการค่าใช้จ่ายนี้?")) return; 
     try {
       await deleteExpense(id); 
       load(); 
@@ -91,9 +91,15 @@ function Expenses() {
                   <TableCell className="text-muted-foreground min-w-[200px]">{e.description || "—"}</TableCell>
                   <TableCell className="text-right font-bold text-destructive whitespace-nowrap">{formatTHB(e.amount)}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => remove(e.id)} className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <ConfirmDelete
+                      onConfirm={() => remove(e.id)}
+                      title="ยืนยันการลบค่าใช้จ่าย"
+                      description={`คุณแน่ใจหรือไม่ว่าต้องการลบรายการค่าใช้จ่ายนี้?\nการดำเนินการนี้ไม่สามารถกู้คืนได้`}
+                    >
+                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </ConfirmDelete>
                   </TableCell>
                 </TableRow>
               ))}
@@ -124,9 +130,15 @@ function Expenses() {
               </div>
               <div className="flex flex-col items-end gap-2">
                 <span className="font-black text-destructive text-sm">{formatTHB(e.amount)}</span>
-                <Button variant="ghost" size="icon" onClick={() => remove(e.id)} className="h-7 w-7 text-muted-foreground/50 hover:text-destructive">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <ConfirmDelete
+                  onConfirm={() => remove(e.id)}
+                  title="ยืนยันการลบค่าใช้จ่าย"
+                  description="คุณแน่ใจหรือไม่ว่าต้องการลบรายการค่าใช้จ่ายนี้? การดำเนินการนี้ไม่สามารถกู้คืนได้"
+                >
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/50 hover:text-destructive">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </ConfirmDelete>
               </div>
             </div>
           ))}

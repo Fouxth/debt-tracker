@@ -28,11 +28,11 @@ export async function dbCreateLoan(data: any, loanNumber: string, userId: string
   
   if (result.length > 0) {
     const loan = result[0];
-    const customers = await sql`SELECT full_name FROM customers WHERE id = ${loan.customer_id}`;
+    const customers = await sql`SELECT full_name FROM customers WHERE id = ${loan.customerId}`;
     if (customers.length > 0) {
       const customer = customers[0];
       const formattedPrincipal = Number(loan.principal).toLocaleString('en-US', {minimumFractionDigits: 2});
-      const message = `📝 แจ้งเตือนเปิดสัญญาใหม่\n━━━━━━━━━━━━━━━━\n👤 ลูกค้า: ${customer.full_name}\n🏷 สัญญา: ${loan.loan_number}\n💸 ยอดจัด: ${formattedPrincipal} บาท\n━━━━━━━━━━━━━━━━\n✅ อนุมัติและบันทึกเข้าระบบแล้ว`;
+      const message = `📝 แจ้งเตือนเปิดสัญญาใหม่\n━━━━━━━━━━━━━━━━\n👤 ลูกค้า: ${customer.fullName}\n🏷 สัญญา: ${loan.loanNumber}\n💸 ยอดจัด: ${formattedPrincipal} บาท\n━━━━━━━━━━━━━━━━\n✅ อนุมัติและบันทึกเข้าระบบแล้ว`;
       sendLineNotify(message, 'loan');
     }
   }
@@ -95,5 +95,31 @@ export async function dbRefinanceLoan(oldLoanId: string, newData: any, newLoanNu
     `;
 
     return newLoan;
+  });
+}
+
+export async function dbDeleteLoan(id: string) {
+  const loans = await sql`
+    SELECT l.loan_number, c.full_name as customer_name, l.principal
+    FROM loans l
+    JOIN customers c ON l.customer_id = c.id
+    WHERE l.id = ${id}
+  `;
+
+  if (loans.length === 0) throw new Error("Loan not found");
+  const loan = loans[0];
+
+  return await sql.begin(async sql => {
+    // Clear references from other loans (refinanced chains)
+    await sql`UPDATE loans SET refinanced_from = NULL WHERE refinanced_from = ${id}`;
+    
+    await sql`DELETE FROM payments WHERE loan_id = ${id}`;
+    const result = await sql`DELETE FROM loans WHERE id = ${id}`;
+
+    const formattedPrincipal = Number(loan.principal).toLocaleString('en-US', {minimumFractionDigits: 2});
+    const message = `🚨 แจ้งเตือนการลบสัญญา 🚨\n━━━━━━━━━━━━━━━━\n👤 ลูกค้า: ${loan.customerName}\n📝 สัญญา: ${loan.loanNumber}\n💸 ยอดเงินต้น: ${formattedPrincipal} บาท\n━━━━━━━━━━━━━━━━\n⚠️ มีการลบสัญญานี้ออกจากระบบแล้ว`;
+    sendLineNotify(message, 'fraud');
+
+    return result;
   });
 }

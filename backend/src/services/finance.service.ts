@@ -29,13 +29,13 @@ export async function dbCreatePayment(data: any, userId: string) {
       SELECT l.loan_number, c.full_name as customer_name
       FROM loans l
       JOIN customers c ON l.customer_id = c.id
-      WHERE l.id = ${payment.loan_id}
+      WHERE l.id = ${payment.loanId}
     `;
     
     if (loans.length > 0) {
       const loan = loans[0];
       const formattedAmount = Number(payment.amount).toLocaleString('en-US', {minimumFractionDigits: 2});
-      const message = `🔔 แจ้งเตือนรับชำระเงิน\n━━━━━━━━━━━━━━━━\n👤 ลูกค้า: ${loan.customer_name}\n📝 สัญญา: ${loan.loan_number}\n💰 ยอดชำระ: ${formattedAmount} บาท\n━━━━━━━━━━━━━━━━\n✅ บันทึกเข้าระบบเรียบร้อยแล้ว`;
+      const message = `🔔 แจ้งเตือนรับชำระเงิน\n━━━━━━━━━━━━━━━━\n👤 ลูกค้า: ${loan.customerName}\n📝 สัญญา: ${loan.loanNumber}\n💰 ยอดชำระ: ${formattedAmount} บาท\n━━━━━━━━━━━━━━━━\n✅ บันทึกเข้าระบบเรียบร้อยแล้ว`;
       sendLineNotify(message, 'payment');
     }
   }
@@ -57,7 +57,7 @@ export async function dbDeletePayment(id: string) {
   if (payments.length > 0) {
     const p = payments[0];
     const formattedAmount = Number(p.amount).toLocaleString('en-US', {minimumFractionDigits: 2});
-    const message = `🚨 แจ้งเตือนความผิดปกติ (ลบข้อมูล) 🚨\n━━━━━━━━━━━━━━━━\n🗑 มีการลบรายการชำระเงิน!\n👤 ลูกค้า: ${p.customer_name}\n📝 สัญญา: ${p.loan_number}\n❌ ยอดที่ลบ: ${formattedAmount} บาท\n━━━━━━━━━━━━━━━━\n⚠️ โปรดตรวจสอบความถูกต้องทันที`;
+    const message = `🚨 แจ้งเตือนความผิดปกติ (ลบข้อมูล) 🚨\n━━━━━━━━━━━━━━━━\n🗑 มีการลบรายการชำระเงิน!\n👤 ลูกค้า: ${p.customerName}\n📝 สัญญา: ${p.loanNumber}\n❌ ยอดที่ลบ: ${formattedAmount} บาท\n━━━━━━━━━━━━━━━━\n⚠️ โปรดตรวจสอบความถูกต้องทันที`;
     sendLineNotify(message, 'fraud');
   }
   

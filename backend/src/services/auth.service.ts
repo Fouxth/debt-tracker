@@ -1,15 +1,15 @@
 import sql from '../db';
 
-export async function getUserByEmail(email: string) {
+export async function getUserByUsername(username: string) {
   const [user] = await sql`
-    SELECT id, email, password_hash FROM users WHERE email = ${email}
+    SELECT id, username, password_hash FROM users WHERE username = ${username}
   `;
   return user;
 }
 
 export async function getUserById(id: string) {
   const [user] = await sql`
-    SELECT u.id, u.email, p.full_name, p.avatar_url
+    SELECT u.id, u.username, p.full_name, p.avatar_url
     FROM users u
     LEFT JOIN profiles p ON p.id = u.id
     WHERE u.id = ${id}
@@ -24,11 +24,11 @@ export async function getUserRoles(userId: string) {
   return rolesData.map((r: any) => r.role);
 }
 
-export async function createUser(email: string, passwordHash: string, fullName: string) {
+export async function createUser(username: string, passwordHash: string, fullName: string) {
   return await sql.begin(async (sql: any) => {
     const [u] = await sql`
-      INSERT INTO users (email, password_hash)
-      VALUES (${email}, ${passwordHash})
+      INSERT INTO users (username, password_hash)
+      VALUES (${username}, ${passwordHash})
       RETURNING id
     `;
     

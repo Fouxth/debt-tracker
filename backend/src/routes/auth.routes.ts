@@ -13,11 +13,11 @@ const cookieSameSite: 'lax' | 'none' = crossSiteCookies ? 'none' : 'lax';
 const cookieSecure = isProd || crossSiteCookies;
 
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
   try {
-    const user = await authService.getUserByEmail(email);
+    const user = await authService.getUserByUsername(username);
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid username or password' });
     }
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
@@ -35,10 +35,10 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/signup', async (req, res) => {
-  const { email, password, fullName } = req.body;
+  const { username, password, fullName } = req.body;
   try {
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await authService.createUser(email, passwordHash, fullName);
+    const user = await authService.createUser(username, passwordHash, fullName);
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.cookie('session', token, {
@@ -69,7 +69,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res) => {
     res.json({
       user: {
         id: user.id,
-        email: user.email,
+        username: user.username,
         user_metadata: { full_name: user.fullName, avatar_url: user.avatarUrl }
       },
       roles

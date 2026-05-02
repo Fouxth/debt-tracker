@@ -440,10 +440,10 @@ function Settings() {
             <div className="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-sm">
               <div className="flex items-center gap-6 mb-8">
                 <div className="h-16 w-16 md:h-20 md:w-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary text-2xl md:text-3xl font-black border border-primary/10 shrink-0">
-                  {user?.email?.charAt(0).toUpperCase()}
+                  {user?.username?.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <h4 className="font-black text-lg md:text-xl text-foreground truncate">{user?.email}</h4>
+                  <h4 className="font-black text-lg md:text-xl text-foreground truncate">{user?.username}</h4>
                   <div className="flex items-center gap-2 mt-1">
                     <Shield className="h-3 w-3 text-info" />
                     <span className="text-xs font-bold text-info uppercase tracking-wider">

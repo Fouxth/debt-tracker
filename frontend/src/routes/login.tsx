@@ -15,7 +15,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const { user, loading, signIn, signUp } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -25,9 +25,9 @@ function LoginPage() {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(username, password);
     setBusy(false);
-    if (error) return toast.error(error === 'Invalid email or password' ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' : error);
+    if (error) return toast.error(error === 'Invalid username or password' ? 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' : error);
     toast.success("ยินดีต้อนรับกลับเข้าสู่ระบบ");
     navigate({ to: "/" });
   };
@@ -35,11 +35,11 @@ function LoginPage() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const { error } = await signUp(email, password, fullName);
+    const { error } = await signUp(username, password, fullName);
     setBusy(false);
     if (error) return toast.error(error);
     toast.success("สร้างบัญชีเรียบร้อยแล้ว — กำลังเข้าสู่ระบบ...");
-    await signIn(email, password);
+    await signIn(username, password);
     navigate({ to: "/" });
   };
 
@@ -70,8 +70,8 @@ function LoginPage() {
             <TabsContent value="signin" className="animate-in fade-in slide-in-from-left-4 duration-500">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">อีเมล</Label>
-                  <Input id="email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} className="bg-muted/30" />
+                  <Label htmlFor="username">ชื่อผู้ใช้ (Username)</Label>
+                  <Input id="username" placeholder="admin" required value={username} onChange={(e) => setUsername(e.target.value)} className="bg-muted/30" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">รหัสผ่าน</Label>
@@ -91,8 +91,8 @@ function LoginPage() {
                   <Input id="su-name" placeholder="สมชาย ใจดี" required value={fullName} onChange={(e) => setFullName(e.target.value)} className="bg-muted/30" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="su-email">อีเมล</Label>
-                  <Input id="su-email" type="email" placeholder="name@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} className="bg-muted/30" />
+                  <Label htmlFor="su-username">ชื่อผู้ใช้ (Username)</Label>
+                  <Input id="su-username" placeholder="admin" required value={username} onChange={(e) => setUsername(e.target.value)} className="bg-muted/30" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="su-password">รหัสผ่าน</Label>

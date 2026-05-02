@@ -43,4 +43,11 @@ router.post('/:id/refinance', async (req: AuthRequest, res) => {
   catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+router.delete('/:id', async (req, res) => {
+  try {
+    res.json(await loanService.dbDeleteLoan(req.params.id));
+  }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;

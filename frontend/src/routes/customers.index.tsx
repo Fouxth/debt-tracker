@@ -16,6 +16,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Plus, Search, Trash2, Pencil, Phone, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/utils/format";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 
 export const Route = createFileRoute("/customers/")({
   component: () => (
@@ -62,7 +63,6 @@ function Customers() {
   });
 
   const remove = async (id: string) => {
-    if (!confirm(t('common.confirm_delete', 'ยืนยันการลบ?'))) return;
     try {
       await deleteCustomer(id);
       try {
@@ -170,9 +170,15 @@ function Customers() {
                     <Button variant="ghost" size="icon" onClick={() => { setEditing(c); setOpen(true); }} className="h-8 w-8">
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => remove(c.id)} className="h-8 w-8 hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <ConfirmDelete
+                      onConfirm={() => remove(c.id)}
+                      title="ยืนยันการลบลูกค้า"
+                      description={`คุณแน่ใจหรือไม่ว่าต้องการลบลูกค้ารายนี้?\nข้อมูลสัญญาที่เกี่ยวข้องทั้งหมดจะยังคงอยู่ แต่ลูกค้านี้จะถูกลบออกจากรายชื่อ`}
+                    >
+                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </ConfirmDelete>
                   </div>
                 </TableCell>
               </TableRow>
@@ -214,9 +220,15 @@ function Customers() {
                 <Button variant="outline" size="sm" onClick={() => { setEditing(c); setOpen(true); }} className="h-8 px-3">
                   <Pencil className="mr-1 h-3.5 w-3.5" />{t('actions.edit', 'แก้ไข')}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => remove(c.id)} className="h-8 px-3 text-destructive border-destructive/20 hover:bg-destructive/10">
-                  <Trash2 className="mr-1 h-3.5 w-3.5" />{t('actions.delete', 'ลบ')}
-                </Button>
+                <ConfirmDelete
+                  onConfirm={() => remove(c.id)}
+                  title="ยืนยันการลบลูกค้า"
+                  description="คุณแน่ใจหรือไม่ว่าต้องการลบลูกค้ารายนี้?"
+                >
+                  <Button variant="outline" size="sm" className="h-8 px-3 text-destructive border-destructive/20 hover:bg-destructive/10">
+                    <Trash2 className="mr-1 h-3.5 w-3.5" />{t('actions.delete', 'ลบ')}
+                  </Button>
+                </ConfirmDelete>
               </div>
             </div>
           </div>

@@ -1,5 +1,5 @@
-import { logActivity, getLoanById, getPaymentsByLoan, createPayment, deletePayment, refinanceLoan } from "@/lib/services";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { logActivity, getLoanById, getPaymentsByLoan, createPayment, deletePayment, refinanceLoan, deleteLoan } from "@/lib/services";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { formatTHB, formatDate } from "@/utils/format";
 import { calcLoan } from "@/utils/loanCalc";
 import { RefreshCw } from "lucide-react";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 
 export const Route = createFileRoute("/loans/$loanId")({
   component: () => (<ProtectedRoute><AppLayout><LoanDetail /></AppLayout></ProtectedRoute>),
@@ -29,6 +30,7 @@ const METHOD_LABELS: Record<string, string> = {
 
 function LoanDetail() {
   const { loanId } = Route.useParams();
+  const navigate = useNavigate();
   const [loan, setLoan] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
@@ -52,7 +54,6 @@ function LoanDetail() {
   const remaining = Math.max(Number(loan.totalPayable) - paid, 0);
 
   const removePayment = async (id: string) => {
-    if (!confirm("คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการชำระเงินนี้?")) return;
     try {
       await deletePayment(id);
       try {
@@ -62,6 +63,21 @@ function LoanDetail() {
       }
       toast.success("ลบประวัติการชำระเงินเรียบร้อยแล้ว");
       load();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const removeLoan = async () => {
+    try {
+      await deleteLoan(loanId);
+      try {
+        await logActivity({ action: "delete_loan", entity_type: "loan", entity_id: loanId, details: { loanNumber: loan.loanNumber } });
+      } catch (logError) {
+        console.error("Activity log failed:", logError);
+      }
+      toast.success("ลบสัญญาเรียบร้อยแล้ว");
+      navigate({ to: "/loans" });
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -99,6 +115,16 @@ function LoanDetail() {
               remaining={remaining} 
               onDone={() => { load(); }} 
             />
+
+            <ConfirmDelete 
+              onConfirm={removeLoan}
+              title="ยืนยันการลบสัญญา"
+              description={`🚨 คุณแน่ใจหรือไม่ว่าต้องการลบสัญญานี้?\nการลบจะลบข้อมูลประวัติการชำระเงินทั้งหมดที่เกี่ยวข้องออกไปด้วย และไม่สามารถกู้คืนได้!`}
+            >
+              <Button variant="outline" size="icon" className="h-11 w-11 rounded-xl border-destructive/20 text-destructive hover:bg-destructive/10 hover:border-destructive shadow-sm" title="ลบสัญญา">
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            </ConfirmDelete>
           </div>
         }
       />
@@ -160,9 +186,15 @@ function LoanDetail() {
                     {formatDate(p.paymentDate)} · {METHOD_LABELS[p.method] || p.method}
                   </p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => removePayment(p.id)} className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <ConfirmDelete
+                  onConfirm={() => removePayment(p.id)}
+                  title="ยืนยันการลบประวัติการชำระเงิน"
+                  description={`คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการชำระเงินนี้?\nการดำเนินการนี้ไม่สามารถกู้คืนได้`}
+                >
+                  <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </ConfirmDelete>
               </div>
             ))}
           </div>

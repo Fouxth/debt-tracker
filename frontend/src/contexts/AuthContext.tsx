@@ -5,8 +5,8 @@ interface AuthContextType {
   user: any | null;
   roles: string[];
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
+  signIn: (username: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (username: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -40,9 +40,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (username: string, password: string) => {
     try {
-      await api.post("/auth/login", { email, password });
+      await api.post("/auth/login", { username, password });
       await refreshUser();
       return { error: null };
     } catch (e: any) {
@@ -50,9 +50,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (username: string, password: string, fullName: string) => {
     try {
-      await api.post("/auth/signup", { email, password, fullName });
+      await api.post("/auth/signup", { username, password, fullName });
       await refreshUser();
       return { error: null };
     } catch (e: any) {

@@ -19,6 +19,7 @@ export const getLoanById = (id: string) => api.get(`/loans/${id}`).then(r => r.d
 export const getLoansByCustomer = (customerId: string) => api.get(`/loans/customer/${customerId}`).then(r => r.data);
 export const createLoan = (data: any) => api.post('/loans', data).then(r => r.data);
 export const refinanceLoan = (id: string, data: any) => api.post(`/loans/${id}/refinance`, data).then(r => r.data);
+export const deleteLoan = (id: string) => api.delete(`/loans/${id}`).then(r => r.data);
 export const getNotifications = () => api.get('/loans/notifications').then(r => r.data);
 
 // Finance
