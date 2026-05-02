@@ -13,9 +13,12 @@ const cookieSameSite: 'lax' | 'none' = crossSiteCookies ? 'none' : 'lax';
 const cookieSecure = isProd || crossSiteCookies;
 
 router.post('/login', async (req, res) => {
+  console.log('Login attempt:', req.body);
   const { username, password } = req.body;
   try {
     const user = await authService.getUserByUsername(username);
+    console.log('User found:', user ? { id: user.id, username: user.username } : 'none');
+    
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       return res.status(401).json({ error: 'Invalid username or password' });
     }

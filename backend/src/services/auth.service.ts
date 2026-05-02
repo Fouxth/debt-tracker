@@ -1,6 +1,7 @@
 import sql from '../db';
 
 export async function getUserByUsername(username: string) {
+  if (!username) return null;
   const [user] = await sql`
     SELECT id, username, password_hash FROM users WHERE username = ${username}
   `;
@@ -8,6 +9,7 @@ export async function getUserByUsername(username: string) {
 }
 
 export async function getUserById(id: string) {
+  if (!id) return null;
   const [user] = await sql`
     SELECT u.id, u.username, p.full_name, p.avatar_url
     FROM users u
@@ -25,6 +27,9 @@ export async function getUserRoles(userId: string) {
 }
 
 export async function createUser(username: string, passwordHash: string, fullName: string) {
+  if (!username || !passwordHash || !fullName) {
+    throw new Error('Missing required fields for user creation');
+  }
   return await sql.begin(async (sql: any) => {
     const [u] = await sql`
       INSERT INTO users (username, password_hash)
