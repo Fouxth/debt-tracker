@@ -4,12 +4,9 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load environment variables from root .env only in local development. 
-// On Vercel, env vars are provided by the platform.
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-  dotenv.config({ path: path.join(process.cwd(), '.env') });
-  dotenv.config({ path: path.join(process.cwd(), '../.env') });
-}
+// Load environment variables from root .env.
+dotenv.config({ path: path.join(process.cwd(), '.env') });
+dotenv.config({ path: path.join(process.cwd(), '../.env') });
 
 // Routes
 import authRoutes from './routes/auth.routes';

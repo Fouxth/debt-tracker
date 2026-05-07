@@ -53,3 +53,11 @@ export async function createUser(username: string, passwordHash: string, fullNam
     return u;
   });
 }
+
+export async function updateUserPassword(id: string, passwordHash: string) {
+  await sql`
+    UPDATE users 
+    SET password_hash = ${passwordHash}
+    WHERE id = ${id}
+  `;
+}

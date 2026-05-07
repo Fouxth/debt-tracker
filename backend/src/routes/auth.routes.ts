@@ -120,4 +120,22 @@ router.get('/me', authenticate, async (req: AuthRequest, res) => {
   }
 });
 
+router.post('/change-password', authenticate, async (req: AuthRequest, res) => {
+  const { currentPassword, newPassword } = req.body;
+  try {
+    const user = await authService.getUserById(req.userId!);
+    if (!user || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      return res.status(401).json({ error: 'รหัสผ่านเดิมไม่ถูกต้อง' });
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    await authService.updateUserPassword(user.id, newPasswordHash);
+
+    res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จ' });
+  } catch (e: any) {
+    console.error('Change Password Error:', e);
+    res.status(500).json({ error: e.message || 'Internal Server Error' });
+  }
+});
+
 export default router;

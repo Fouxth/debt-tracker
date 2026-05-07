@@ -17,8 +17,17 @@ import {
   getLoans, 
   getPayments, 
   getCustomers,
-  getExpenses
+  getExpenses,
+  changePassword
 } from "@/lib/services";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   User, 
   Moon, 
@@ -61,6 +70,8 @@ function Settings() {
     expense: true,
     fraud: true
   });
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [passwords, setPasswords] = useState({ current: "", new: "", confirm: "" });
 
   useEffect(() => {
     (async () => {
@@ -139,13 +150,30 @@ function Settings() {
     }
   };
 
-  const handleSaveLineNotify = async () => {
-    setBusy("line");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (passwords.new !== passwords.confirm) {
+      return toast.error("รหัสผ่านใหม่ไม่ตรงกัน");
+    }
+    if (passwords.new.length < 4) {
+      return toast.error("รหัสผ่านต้องมีความยาวอย่างน้อย 4 ตัวอักษร");
+    }
+
+    setBusy("password");
     try {
-      await updateSetting("line_notify", { token: lineToken, enabled: lineEnabled, events: lineEvents });
-      toast.success("บันทึกการตั้งค่า LINE Notify เรียบร้อยแล้ว");
-    } catch (e) {
-      toast.error("บันทึกข้อมูลล้มเหลว");
+      await changePassword({ 
+        currentPassword: passwords.current, 
+        newPassword: passwords.new 
+      });
+      toast.success("เปลี่ยนรหัสผ่านสำเร็จแล้ว");
+      setPasswordOpen(false);
+      setPasswords({ current: "", new: "", confirm: "" });
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || "ไม่สามารถเปลี่ยนรหัสผ่านได้");
     } finally {
       setBusy(null);
     }
@@ -453,7 +481,13 @@ function Settings() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-3">
-                <Button variant="outline" className="rounded-xl font-bold border-border/50 h-10 px-6">เปลี่ยนรหัสผ่าน</Button>
+                <Button 
+                  variant="outline" 
+                  className="rounded-xl font-bold border-border/50 h-10 px-6"
+                  onClick={() => setPasswordOpen(true)}
+                >
+                  เปลี่ยนรหัสผ่าน
+                </Button>
                 <Button variant="outline" className="rounded-xl font-bold text-destructive border-destructive/20 hover:bg-destructive/10 h-10 px-6" onClick={signOut}>
                   <LogOut className="mr-2 h-4 w-4" /> ออกจากระบบ
                 </Button>
@@ -714,6 +748,67 @@ function Settings() {
 
         </div>
       </div>
+
+      {/* Password Change Dialog */}
+      <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
+        <DialogContent className="rounded-2xl max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="font-black text-xl">เปลี่ยนรหัสผ่าน</DialogTitle>
+            <DialogDescription className="text-xs font-bold text-muted-foreground">
+              กรุณากรอกรหัสผ่านเดิมและตั้งรหัสผ่านใหม่เพื่อความปลอดภัย
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest">รหัสผ่านปัจจุบัน</Label>
+              <Input 
+                type="password" 
+                value={passwords.current}
+                onChange={(e) => setPasswords({...passwords, current: e.target.value})}
+                className="rounded-xl h-11 bg-muted/20"
+                placeholder="••••••••"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest">รหัสผ่านใหม่</Label>
+              <Input 
+                type="password" 
+                value={passwords.new}
+                onChange={(e) => setPasswords({...passwords, new: e.target.value})}
+                className="rounded-xl h-11 bg-muted/20"
+                placeholder="••••••••"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest">ยืนยันรหัสผ่านใหม่</Label>
+              <Input 
+                type="password" 
+                value={passwords.confirm}
+                onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
+                className="rounded-xl h-11 bg-muted/20"
+                placeholder="••••••••"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="ghost" 
+              className="rounded-xl font-bold h-11"
+              onClick={() => setPasswordOpen(false)}
+            >
+              ยกเลิก
+            </Button>
+            <Button 
+              className="rounded-xl font-black h-11 px-8"
+              onClick={handleChangePassword}
+              disabled={busy === "password" || !passwords.current || !passwords.new}
+            >
+              {busy === "password" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              ยืนยันการเปลี่ยนรหัส
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

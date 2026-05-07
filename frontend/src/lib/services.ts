@@ -5,6 +5,7 @@ export const login = (data: any) => api.post('/auth/login', data).then(r => r.da
 export const signup = (data: any) => api.post('/auth/signup', data).then(r => r.data);
 export const logout = () => api.post('/auth/logout').then(r => r.data);
 export const getCurrentUser = () => api.get('/auth/me').then(r => r.data);
+export const changePassword = (data: any) => api.post('/auth/change-password', data).then(r => r.data);
 
 // Customers
 export const getCustomers = () => api.get('/customers').then(r => r.data);
