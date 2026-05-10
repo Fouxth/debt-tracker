@@ -7,12 +7,12 @@ import path from 'path';
 import fs from 'fs';
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (req: any, file: any, cb: any) => {
     const dir = 'uploads/loans';
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
-  filename: (req, file, cb) => {
+  filename: (req: any, file: any, cb: any) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
@@ -73,7 +73,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Attachments
-router.post('/:id/attachments', upload.single('file'), async (req, res) => {
+router.post('/:id/attachments', upload.single('file'), async (req: any, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const result = await uploadService.dbAddAttachment(req.params.id as string, req.file.path, req.file.originalname);
