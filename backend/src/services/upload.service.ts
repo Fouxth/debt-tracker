@@ -2,6 +2,8 @@ import sql from '../db';
 import fs from 'fs';
 import path from 'path';
 
+const uploadsRoot = path.resolve(process.cwd(), 'uploads');
+
 export async function dbAddAttachment(loanId: string, filePath: string, fileName: string) {
   return await sql`
     INSERT INTO loan_attachments (loan_id, file_path, file_name)
@@ -21,7 +23,11 @@ export async function dbDeleteAttachment(id: string) {
   if (!attachment) throw new Error("Attachment not found");
 
   // Remove file from disk
-  const fullPath = path.join(process.cwd(), attachment.filePath);
+  const fullPath = path.resolve(process.cwd(), attachment.filePath);
+  if (!fullPath.startsWith(`${uploadsRoot}${path.sep}`)) {
+    throw new Error('Invalid attachment path');
+  }
+
   if (fs.existsSync(fullPath)) {
     fs.unlinkSync(fullPath);
   }

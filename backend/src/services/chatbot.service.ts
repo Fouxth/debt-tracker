@@ -189,7 +189,7 @@ async function handleCustomerSearch(replyToken: string, name: string) {
     for (const loan of loans) {
       const allPayments = await sql`SELECT amount FROM payments WHERE loan_id = ${loan.id}`;
       const totalPaid = allPayments.reduce((acc: number, p: any) => acc + Number(p.amount), 0);
-      const remaining = Math.max(Number(loan.is_interest_only ? loan.principal : loan.totalPayable) - totalPaid, 0);
+      const remaining = Math.max(Number(loan.isInterestOnly ? loan.principal : loan.totalPayable) - totalPaid, 0);
       
       totalRemaining += remaining;
       
@@ -197,7 +197,7 @@ async function handleCustomerSearch(replyToken: string, name: string) {
         type: 'box',
         layout: 'horizontal',
         contents: [
-          { type: 'text', text: `📝 ${loan.loan_number}`, size: 'xs', color: '#8c8c8c', flex: 2 },
+          { type: 'text', text: `📝 ${loan.loanNumber}`, size: 'xs', color: '#8c8c8c', flex: 2 },
           { type: 'text', text: `${remaining.toLocaleString('en-US', {minimumFractionDigits: 2})} ฿`, size: 'xs', color: '#ef4444', align: 'end', weight: 'bold', flex: 3 }
         ]
       });
@@ -260,13 +260,13 @@ async function handleOverdue(replyToken: string) {
   }
 
   const items = overdueLoans.map(loan => {
-    const daysOverdue = Math.floor((new Date(today).getTime() - new Date(loan.due_date).getTime()) / (1000 * 60 * 60 * 24));
+    const daysOverdue = Math.floor((new Date(today).getTime() - new Date(loan.dueDate).getTime()) / (1000 * 60 * 60 * 24));
     return {
       type: 'box',
       layout: 'horizontal',
       margin: 'sm',
       contents: [
-        { type: 'text', text: `👤 ${loan.customer_name}`, size: 'xs', color: '#333333', flex: 3, wrap: true },
+        { type: 'text', text: `👤 ${loan.customerName}`, size: 'xs', color: '#333333', flex: 3, wrap: true },
         { type: 'text', text: `${daysOverdue} วัน`, size: 'xs', color: '#ef4444', align: 'end', weight: 'bold', flex: 2 }
       ]
     };

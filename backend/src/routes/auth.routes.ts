@@ -3,9 +3,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import * as authService from '../services/auth.service';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
+import { getJwtSecret } from '../utils/jwt';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 router.post('/login', async (req: any, res) => {
   const { username, password } = req.body;
@@ -22,7 +22,7 @@ router.post('/login', async (req: any, res) => {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id }, getJwtSecret(), { expiresIn: '7d' });
     
     // Auto-detect if we should use Secure/SameSite=None
     // In production/HTTPS, we MUST use SameSite=None to support mobile and cross-site access
@@ -57,7 +57,7 @@ router.post('/signup', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await authService.createUser(username, passwordHash, fullName);
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id }, getJwtSecret(), { expiresIn: '7d' });
     
     const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
     const useSecure = isHttps || (process.env.NODE_ENV === 'production');

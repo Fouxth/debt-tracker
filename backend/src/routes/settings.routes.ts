@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import sql from '../db';
+import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
+
+router.use(authenticate);
 
 // Get all settings
 router.get('/', async (_req, res) => {

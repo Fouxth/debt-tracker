@@ -6,6 +6,14 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
+const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+]);
+
 const storage = multer.diskStorage({
   destination: (req: any, file: any, cb: any) => {
     const dir = 'uploads/loans';
@@ -17,7 +25,17 @@ const storage = multer.diskStorage({
     cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_ATTACHMENT_SIZE_BYTES },
+  fileFilter: (_req, file, cb) => {
+    if (!ALLOWED_ATTACHMENT_TYPES.has(file.mimetype)) {
+      return cb(new Error('Unsupported attachment file type'));
+    }
+
+    cb(null, true);
+  },
+});
 
 const router = Router();
 

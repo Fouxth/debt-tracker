@@ -38,7 +38,7 @@ export async function dbCreatePayment(data: any, userId: string) {
         // Calculate remaining balance
         const allPayments = await sql`SELECT amount FROM payments WHERE loan_id = ${payment.loanId}`;
         const totalPaid = allPayments.reduce((acc, p) => acc + Number(p.amount), 0);
-        const remaining = Math.max(Number(loan.is_interest_only ? loan.principal : loan.totalPayable) - totalPaid, 0);
+        const remaining = Math.max(Number(loan.isInterestOnly ? loan.principal : loan.totalPayable) - totalPaid, 0);
 
         const formattedAmount = Number(payment.amount).toLocaleString('en-US', {minimumFractionDigits: 2});
         const formattedRemaining = remaining.toLocaleString('en-US', {minimumFractionDigits: 2});
@@ -50,7 +50,7 @@ export async function dbCreatePayment(data: any, userId: string) {
           accentColor: '#10b981',
           items: [
             { label: 'ลูกค้า', value: loan.customerName },
-            { label: 'เลขที่สัญญา', value: loan.loan_number },
+            { label: 'เลขที่สัญญา', value: loan.loanNumber },
             { label: 'ยอดเงินชำระ', value: `${formattedAmount} บาท`, color: '#10b981' },
             { label: 'ยอดคงเหลือรวม', value: `${formattedRemaining} บาท`, color: '#ef4444' }
           ],

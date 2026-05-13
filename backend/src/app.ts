@@ -70,7 +70,11 @@ export function createApp() {
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
     }),
   );
-  app.use(express.json());
+  app.use(express.json({
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }));
   app.use(cookieParser());
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
