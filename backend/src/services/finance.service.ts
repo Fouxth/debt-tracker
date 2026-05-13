@@ -35,8 +35,17 @@ export async function dbCreatePayment(data: any, userId: string) {
     if (loans.length > 0) {
       const loan = loans[0];
       const formattedAmount = Number(payment.amount).toLocaleString('en-US', {minimumFractionDigits: 2});
-      const message = `🔔 แจ้งเตือนรับชำระเงิน\n━━━━━━━━━━━━━━━━\n👤 ลูกค้า: ${loan.customerName}\n📝 สัญญา: ${loan.loanNumber}\n💰 ยอดชำระ: ${formattedAmount} บาท\n━━━━━━━━━━━━━━━━\n✅ บันทึกเข้าระบบเรียบร้อยแล้ว`;
-      sendLineNotify(message, 'payment');
+      const message = `🔔 แจ้งเตือนรับชำระเงิน\n👤 ลูกค้า: ${loan.customerName}\n📝 สัญญา: ${loan.loanNumber}\n💰 ยอดชำระ: ${formattedAmount} บาท`;
+      sendLineNotify(message, 'payment', {
+        title: '🔔 รับชำระเงินเรียบร้อย',
+        accentColor: '#10b981',
+        items: [
+          { label: 'ลูกค้า', value: loan.customerName },
+          { label: 'เลขที่สัญญา', value: loan.loanNumber },
+          { label: 'ยอดเงินชำระ', value: `${formattedAmount} บาท`, color: '#10b981' }
+        ],
+        footer: 'ตรวจสอบยอดในแอปได้ทันที'
+      });
     }
   }
   
@@ -57,8 +66,17 @@ export async function dbDeletePayment(id: string) {
   if (payments.length > 0) {
     const p = payments[0];
     const formattedAmount = Number(p.amount).toLocaleString('en-US', {minimumFractionDigits: 2});
-    const message = `🚨 แจ้งเตือนความผิดปกติ (ลบข้อมูล) 🚨\n━━━━━━━━━━━━━━━━\n🗑 มีการลบรายการชำระเงิน!\n👤 ลูกค้า: ${p.customerName}\n📝 สัญญา: ${p.loanNumber}\n❌ ยอดที่ลบ: ${formattedAmount} บาท\n━━━━━━━━━━━━━━━━\n⚠️ โปรดตรวจสอบความถูกต้องทันที`;
-    sendLineNotify(message, 'fraud');
+    const message = `🚨 แจ้งเตือนความผิดปกติ (ลบข้อมูล)\n👤 ลูกค้า: ${p.customerName}\n📝 สัญญา: ${p.loanNumber}\n❌ ยอดที่ลบ: ${formattedAmount} บาท`;
+    sendLineNotify(message, 'fraud', {
+      title: '🚨 ยกเลิกรายการชำระ',
+      accentColor: '#f59e0b',
+      items: [
+        { label: 'ลูกค้า', value: p.customerName },
+        { label: 'เลขที่สัญญา', value: p.loanNumber },
+        { label: 'ยอดที่ถูกลบ', value: `${formattedAmount} บาท` }
+      ],
+      footer: 'โปรดตรวจสอบความถูกต้องทันที'
+    });
   }
   
   return result;
@@ -78,8 +96,17 @@ export async function dbCreateExpense(data: any, userId: string) {
     const categoryMap: any = { fuel: 'ค่าน้ำมัน', staff: 'เงินเดือนพนักงาน', calls: 'ค่าโทรศัพท์', documents: 'ค่าเอกสาร', other: 'อื่นๆ' };
     const catText = categoryMap[expense.category] || expense.category;
     const formattedAmount = Number(expense.amount).toLocaleString('en-US', {minimumFractionDigits: 2});
-    const message = `💸 แจ้งเตือนบันทึกรายจ่าย\n━━━━━━━━━━━━━━━━\n📂 หมวดหมู่: ${catText}\n💰 จำนวนเงิน: ${formattedAmount} บาท\n📌 รายละเอียด: ${expense.details || '-'}\n━━━━━━━━━━━━━━━━\n✅ บันทึกรายจ่ายเข้าระบบแล้ว`;
-    sendLineNotify(message, 'expense');
+    const message = `💸 แจ้งเตือนบันทึกรายจ่าย\n📂 หมวดหมู่: ${catText}\n💰 จำนวนเงิน: ${formattedAmount} บาท`;
+    sendLineNotify(message, 'expense', {
+      title: '💸 บันทึกรายจ่ายใหม่',
+      accentColor: '#6366f1',
+      items: [
+        { label: 'หมวดหมู่', value: catText },
+        { label: 'จำนวนเงิน', value: `${formattedAmount} บาท`, color: '#6366f1' },
+        { label: 'รายละเอียด', value: expense.details || '-' }
+      ],
+      footer: 'บันทึกรายจ่ายเข้าระบบแล้ว'
+    });
   }
   
   return result;

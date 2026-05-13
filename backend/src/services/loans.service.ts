@@ -32,8 +32,17 @@ export async function dbCreateLoan(data: any, loanNumber: string, userId: string
     if (customers.length > 0) {
       const customer = customers[0];
       const formattedPrincipal = Number(loan.principal).toLocaleString('en-US', {minimumFractionDigits: 2});
-      const message = `📝 แจ้งเตือนเปิดสัญญาใหม่\n━━━━━━━━━━━━━━━━\n👤 ลูกค้า: ${customer.fullName}\n🏷 สัญญา: ${loan.loanNumber}\n💸 ยอดจัด: ${formattedPrincipal} บาท\n━━━━━━━━━━━━━━━━\n✅ อนุมัติและบันทึกเข้าระบบแล้ว`;
-      sendLineNotify(message, 'loan');
+      const message = `📝 แจ้งเตือนเปิดสัญญาใหม่\n👤 ลูกค้า: ${customer.fullName}\n🏷 สัญญา: ${loan.loanNumber}\n💸 ยอดจัด: ${formattedPrincipal} บาท`;
+      sendLineNotify(message, 'loan', {
+        title: '📝 เปิดสัญญาใหม่',
+        accentColor: '#0ea5e9',
+        items: [
+          { label: 'ลูกค้า', value: customer.fullName },
+          { label: 'เลขที่สัญญา', value: loan.loanNumber },
+          { label: 'ยอดเงินต้น', value: `${formattedPrincipal} บาท`, color: '#0ea5e9' }
+        ],
+        footer: 'บันทึกเข้าระบบเรียบร้อยแล้ว'
+      });
     }
   }
   
@@ -129,8 +138,17 @@ export async function dbDeleteLoan(id: string) {
     const result = await sql`DELETE FROM loans WHERE id = ${id}`;
 
     const formattedPrincipal = Number(loan.principal).toLocaleString('en-US', {minimumFractionDigits: 2});
-    const message = `🚨 แจ้งเตือนการลบสัญญา 🚨\n━━━━━━━━━━━━━━━━\n👤 ลูกค้า: ${loan.customerName}\n📝 สัญญา: ${loan.loanNumber}\n💸 ยอดเงินต้น: ${formattedPrincipal} บาท\n━━━━━━━━━━━━━━━━\n⚠️ มีการลบสัญญานี้ออกจากระบบแล้ว`;
-    sendLineNotify(message, 'fraud');
+    const message = `🚨 แจ้งเตือนการลบสัญญา\n👤 ลูกค้า: ${loan.customerName}\n📝 สัญญา: ${loan.loanNumber}\n💸 ยอดเงินต้น: ${formattedPrincipal} บาท`;
+    sendLineNotify(message, 'fraud', {
+      title: '🚨 ระงับ/ลบสัญญา',
+      accentColor: '#ef4444',
+      items: [
+        { label: 'ลูกค้า', value: loan.customerName },
+        { label: 'เลขที่สัญญา', value: loan.loanNumber },
+        { label: 'ยอดเงินต้น', value: `${formattedPrincipal} บาท` }
+      ],
+      footer: 'มีการลบข้อมูลนี้ออกจากระบบ'
+    });
 
     return result;
   });

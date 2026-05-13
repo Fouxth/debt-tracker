@@ -62,7 +62,6 @@ function Settings() {
   const [business, setBusiness] = useState({ nameTH: "", nameEN: "", phone: "", address: "" });
   const [lending, setLending] = useState({ defaultInterestRate: 2, lateFeePerDay: 50, deductInterestUpfront: true });
   const [limits, setLimits] = useState<any[]>([]);
-  const [lineToken, setLineToken] = useState("");
   const [lineUserId, setLineUserId] = useState("");
   const [lineEnabled, setLineEnabled] = useState(false);
   const [lineEvents, setLineEvents] = useState({
@@ -100,7 +99,6 @@ function Settings() {
         }
         
         if (data.line_notify) {
-          setLineToken(data.line_notify.token || "");
           setLineUserId(data.line_notify.userId || "");
           setLineEnabled(!!data.line_notify.enabled);
           if (data.line_notify.events) {
@@ -156,7 +154,6 @@ function Settings() {
     setBusy("line");
     try {
       await updateSetting("line_notify", { 
-        token: lineToken, 
         userId: lineUserId,
         enabled: lineEnabled, 
         events: lineEvents
@@ -647,18 +644,7 @@ function Settings() {
               
                 <div className="space-y-4 pt-2">
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">LINE Notify Token (ส่งเข้ากลุ่ม)</Label>
-                    <Input 
-                      type="password" 
-                      placeholder="ใส่ Token ที่ได้จาก LINE Notify" 
-                      value={lineToken}
-                      onChange={(e) => setLineToken(e.target.value)}
-                      className="bg-muted/20 font-mono h-11"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">LINE User ID (ส่งหาตัวเอง)</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">LINE User ID</Label>
                     <Input 
                       placeholder="U8189cf6745fc0d808977bdb0b9f22995..." 
                       value={lineUserId}
@@ -680,10 +666,6 @@ function Settings() {
                       บันทึกการตั้งค่า LINE
                     </Button>
                   </div>
-                  
-                  <p className="text-[10px] text-muted-foreground text-center">
-                    ขอ Token ได้ที่ <a href="https://notify-bot.line.me/" target="_blank" rel="noreferrer" className="text-[#06C755] hover:underline font-bold">notify-bot.line.me</a>
-                  </p>
                 </div>
               
               {lineEnabled && (
