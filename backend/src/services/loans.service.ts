@@ -32,16 +32,22 @@ export async function dbCreateLoan(data: any, loanNumber: string, userId: string
     if (customers.length > 0) {
       const customer = customers[0];
       const formattedPrincipal = Number(loan.principal).toLocaleString('en-US', {minimumFractionDigits: 2});
-      const message = `📝 แจ้งเตือนเปิดสัญญาใหม่\n👤 ลูกค้า: ${customer.fullName}\n🏷 สัญญา: ${loan.loanNumber}\n💸 ยอดจัด: ${formattedPrincipal} บาท`;
+      const formattedInstallment = Number(loan.installmentAmount).toLocaleString('en-US', {minimumFractionDigits: 2});
+      const dueDate = loan.is_indefinite ? 'ไม่มีกำหนด' : new Date(loan.dueDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+      
+      const message = `📝 แจ้งเตือนเปิดสัญญาใหม่\n👤 ลูกค้า: ${customer.fullName}\n🏷 สัญญา: ${loan.loanNumber}\n💸 ยอดจัด: ${formattedPrincipal} บาท\n📅 ครบกำหนด: ${dueDate}`;
+      
       sendLineNotify(message, 'loan', {
         title: '📝 เปิดสัญญาใหม่',
         accentColor: '#0ea5e9',
         items: [
           { label: 'ลูกค้า', value: customer.fullName },
           { label: 'เลขที่สัญญา', value: loan.loanNumber },
-          { label: 'ยอดเงินต้น', value: `${formattedPrincipal} บาท`, color: '#0ea5e9' }
+          { label: 'ยอดเงินต้น', value: `${formattedPrincipal} บาท`, color: '#0ea5e9' },
+          { label: 'ยอดชำระ/งวด', value: `${formattedInstallment} บาท` },
+          { label: 'วันที่ครบกำหนด', value: dueDate, color: '#f59e0b' }
         ],
-        footer: 'บันทึกเข้าระบบเรียบร้อยแล้ว'
+        footer: 'อนุมัติและบันทึกเข้าระบบแล้ว'
       });
     }
   }

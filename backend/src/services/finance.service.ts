@@ -23,31 +23,41 @@ export async function dbCreatePayment(data: any, userId: string) {
     RETURNING *
   `;
   
-  if (result.length > 0) {
-    const payment = result[0];
-    const loans = await sql`
-      SELECT l.loan_number, c.full_name as customer_name
-      FROM loans l
-      JOIN customers c ON l.customer_id = c.id
-      WHERE l.id = ${payment.loanId}
-    `;
-    
-    if (loans.length > 0) {
-      const loan = loans[0];
-      const formattedAmount = Number(payment.amount).toLocaleString('en-US', {minimumFractionDigits: 2});
-      const message = `🔔 แจ้งเตือนรับชำระเงิน\n👤 ลูกค้า: ${loan.customerName}\n📝 สัญญา: ${loan.loanNumber}\n💰 ยอดชำระ: ${formattedAmount} บาท`;
-      sendLineNotify(message, 'payment', {
-        title: '🔔 รับชำระเงินเรียบร้อย',
-        accentColor: '#10b981',
-        items: [
-          { label: 'ลูกค้า', value: loan.customerName },
-          { label: 'เลขที่สัญญา', value: loan.loanNumber },
-          { label: 'ยอดเงินชำระ', value: `${formattedAmount} บาท`, color: '#10b981' }
-        ],
-        footer: 'ตรวจสอบยอดในแอปได้ทันที'
-      });
+    if (result.length > 0) {
+      const payment = result[0];
+      const loans = await sql`
+        SELECT l.*, c.full_name as customer_name
+        FROM loans l
+        JOIN customers c ON l.customer_id = c.id
+        WHERE l.id = ${payment.loanId}
+      `;
+      
+      if (loans.length > 0) {
+        const loan = loans[0];
+        
+        // Calculate remaining balance
+        const allPayments = await sql`SELECT amount FROM payments WHERE loan_id = ${payment.loanId}`;
+        const totalPaid = allPayments.reduce((acc, p) => acc + Number(p.amount), 0);
+        const remaining = Math.max(Number(loan.is_interest_only ? loan.principal : loan.totalPayable) - totalPaid, 0);
+
+        const formattedAmount = Number(payment.amount).toLocaleString('en-US', {minimumFractionDigits: 2});
+        const formattedRemaining = remaining.toLocaleString('en-US', {minimumFractionDigits: 2});
+        
+        const message = `🔔 แจ้งเตือนรับชำระเงิน\n👤 ลูกค้า: ${loan.customerName}\n💰 ยอดชำระ: ${formattedAmount} บาท\n📉 คงเหลือ: ${formattedRemaining} บาท`;
+        
+        sendLineNotify(message, 'payment', {
+          title: '🔔 รับชำระเงินเรียบร้อย',
+          accentColor: '#10b981',
+          items: [
+            { label: 'ลูกค้า', value: loan.customerName },
+            { label: 'เลขที่สัญญา', value: loan.loan_number },
+            { label: 'ยอดเงินชำระ', value: `${formattedAmount} บาท`, color: '#10b981' },
+            { label: 'ยอดคงเหลือรวม', value: `${formattedRemaining} บาท`, color: '#ef4444' }
+          ],
+          footer: 'ตรวจสอบยอดในแอปได้ทันที'
+        });
+      }
     }
-  }
   
   return result;
 }
