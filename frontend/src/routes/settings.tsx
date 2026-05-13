@@ -63,6 +63,7 @@ function Settings() {
   const [lending, setLending] = useState({ defaultInterestRate: 2, lateFeePerDay: 50, deductInterestUpfront: true });
   const [limits, setLimits] = useState<any[]>([]);
   const [lineToken, setLineToken] = useState("");
+  const [lineUserId, setLineUserId] = useState("");
   const [lineEnabled, setLineEnabled] = useState(false);
   const [lineEvents, setLineEvents] = useState({
     payment: true,
@@ -100,6 +101,7 @@ function Settings() {
         
         if (data.line_notify) {
           setLineToken(data.line_notify.token || "");
+          setLineUserId(data.line_notify.userId || "");
           setLineEnabled(!!data.line_notify.enabled);
           if (data.line_notify.events) {
             setLineEvents(data.line_notify.events);
@@ -153,7 +155,13 @@ function Settings() {
   const handleSaveLineNotify = async () => {
     setBusy("line");
     try {
-      await updateSetting("line_notify", { token: lineToken, enabled: lineEnabled, events: lineEvents });
+      await updateSetting("line_notify", { 
+        token: lineToken, 
+        userId: lineUserId,
+        enabled: lineEnabled, 
+        events: lineEvents
+      });
+      await refreshSettings();
       toast.success("บันทึกการตั้งค่า LINE Notify เรียบร้อยแล้ว");
     } catch (e) {
       toast.error("บันทึกข้อมูลล้มเหลว");
@@ -637,31 +645,46 @@ function Settings() {
                 </div>
               </div>
               
-              <div className="space-y-4 pt-2">
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">LINE Notify Token</Label>
-                  <div className="flex gap-2">
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">LINE Notify Token (ส่งเข้ากลุ่ม)</Label>
                     <Input 
                       type="password" 
                       placeholder="ใส่ Token ที่ได้จาก LINE Notify" 
                       value={lineToken}
                       onChange={(e) => setLineToken(e.target.value)}
-                      className="bg-muted/20 font-mono flex-1"
+                      className="bg-muted/20 font-mono h-11"
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">LINE User ID (ส่งหาตัวเอง)</Label>
+                    <Input 
+                      placeholder="U8189cf6745fc0d808977bdb0b9f22995..." 
+                      value={lineUserId}
+                      onChange={(e) => setLineUserId(e.target.value)}
+                      className="bg-muted/20 font-mono h-11"
+                    />
+                    <p className="text-[10px] text-muted-foreground italic">
+                      * พิมพ์คำว่า <strong>"token"</strong> ส่งหา Bot เพื่อรับรหัส User ID ของคุณ
+                    </p>
+                  </div>
+
+                  <div className="pt-2">
                     <Button 
                       onClick={handleSaveLineNotify} 
                       disabled={busy === "line"}
-                      className="bg-[#06C755] hover:bg-[#06C755]/90 text-white font-bold px-6"
+                      className="w-full bg-[#06C755] hover:bg-[#06C755]/90 text-white font-black h-11 rounded-xl"
                     >
                       {busy === "line" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      บันทึก
+                      บันทึกการตั้งค่า LINE
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    สามารถขอ Token ได้ที่ <a href="https://notify-bot.line.me/" target="_blank" rel="noreferrer" className="text-[#06C755] hover:underline">notify-bot.line.me</a>
+                  
+                  <p className="text-[10px] text-muted-foreground text-center">
+                    ขอ Token ได้ที่ <a href="https://notify-bot.line.me/" target="_blank" rel="noreferrer" className="text-[#06C755] hover:underline font-bold">notify-bot.line.me</a>
                   </p>
                 </div>
-              </div>
               
               {lineEnabled && (
                 <div className="space-y-4 pt-4 border-t border-border/50 animate-in fade-in slide-in-from-top-2">

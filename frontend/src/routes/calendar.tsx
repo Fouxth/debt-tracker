@@ -45,6 +45,13 @@ function toYMD(d: any): string {
   return s.substring(0, 10);
 }
 
+function formatDateYMD(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function CalendarView() {
   const [loans, setLoans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +60,7 @@ function CalendarView() {
     d.setDate(1);
     return d;
   });
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(() => formatDateYMD(new Date()));
 
   useEffect(() => {
     setLoading(true);
@@ -82,7 +89,7 @@ function CalendarView() {
     return map;
   }, [loans]);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = useMemo(() => formatDateYMD(new Date()), []);
 
   const selectedLoans = selected ? byDate[selected] ?? [] : [];
 
@@ -149,7 +156,7 @@ function CalendarView() {
                 if (!date)
                   return <div key={`empty-${i}`} className="min-h-[80px] sm:min-h-[90px]" />;
 
-                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+                const key = formatDateYMD(date);
                 const items = byDate[key] ?? [];
                 const isToday = key === today;
                 const isSelected = key === selected;

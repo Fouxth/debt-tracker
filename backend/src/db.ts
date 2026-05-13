@@ -11,6 +11,7 @@ const sql = postgres(DATABASE_URL, {
   transform: postgres.camel,
   connect_timeout: 10,
   max: 10,
+  idle_timeout: 20,
 });
 
 export default sql;
