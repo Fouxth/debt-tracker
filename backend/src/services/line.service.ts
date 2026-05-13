@@ -94,7 +94,7 @@ function createFlexPayload(to: string, options: { title: string; items: { label:
         altText: options.title,
         contents: {
           type: 'bubble',
-          size: 'medium',
+          size: 'mega',
           header: {
             type: 'box',
             layout: 'vertical',
