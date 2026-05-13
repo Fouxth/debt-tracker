@@ -485,7 +485,6 @@ function PaymentForm({ loanId, suggested, nextNum, isInterestOnly, onDone }: { l
 function RefinanceDialog({ loan, remaining, onDone }: { loan: any; remaining: number; onDone: () => void }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const { lending } = useSettings();
   const [form, setForm] = useState({
     additionalPrincipal: 0,
     interestRate: Number(loan.interestRate),
@@ -511,7 +510,7 @@ function RefinanceDialog({ loan, remaining, onDone }: { loan: any; remaining: nu
         installmentAmount: calc.installment,
         paymentType: form.paymentType,
         startDate: form.startDate,
-        dueDate: calc.due.toISOString().split("T")[0],
+        dueDate: calc.due ? calc.due.toISOString().split("T")[0] : form.startDate,
         notes: form.notes,
       });
       try {
@@ -592,9 +591,8 @@ function RefinanceDialog({ loan, remaining, onDone }: { loan: any; remaining: nu
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">ต่องวด</p>
                 <p className="text-sm font-bold text-primary">{formatTHB(calc.installment)}</p>
               </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">สิ้นสุดวันที่</p>
-                <p className="text-[10px] font-bold">{formatDate(calc.due.toISOString().split("T")[0])}</p>
+                <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">สิ้นสุดวันที่</p>
+                <p className="text-[10px] font-bold">{calc.due ? formatDate(calc.due.toISOString().split("T")[0]) : 'ไม่มีกำหนด'}</p>
               </div>
             </div>
           </div>
