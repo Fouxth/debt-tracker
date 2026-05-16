@@ -59,6 +59,7 @@
       "all": "All Status",
       "active": "Active",
       "overdue": "Overdue",
+      "due_today": "Due Today",
       "completed": "Completed",
       "cancelled": "Cancelled"
     }

@@ -31,6 +31,7 @@ export function loanStatusTone(status: string): any {
   switch (status?.toLowerCase()) {
     case 'active': return 'primary';
     case 'overdue': return 'destructive';
+    case 'due_today': return 'warning';
     case 'completed': return 'success';
     case 'forfeited': return 'destructive';
     case 'refinanced': return 'info';
