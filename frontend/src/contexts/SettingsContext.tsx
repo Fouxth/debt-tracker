@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getSettings } from '@/lib/services';
+import { useAuth } from './AuthContext';
 
 interface SettingsContextType {
   business: {
@@ -20,10 +21,11 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [business, setBusiness] = useState({
     nameTH: 'มั่งมี การเงิน',
-    nameEN: 'LoanDesk Pro',
+    nameEN: 'D4-LoanDesk',
     phone: '',
     address: ''
   });
@@ -56,13 +58,15 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   useEffect(() => {
-    refreshSettings();
-  }, []);
+    if (user?.tenantId) {
+      refreshSettings();
+    }
+  }, [user?.tenantId]);
 
   // Update document title whenever business name changes
   useEffect(() => {
     const th = business.nameTH || 'มั่งมี การเงิน';
-    const en = business.nameEN || 'LoanDesk Pro';
+    const en = business.nameEN || 'D4-LoanDesk';
     document.title = `${th} | ${en}`;
   }, [business]);
 

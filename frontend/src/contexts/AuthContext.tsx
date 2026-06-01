@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import api from "@/lib/api";
+import { dispatchSuspended } from "@/components/SuspendedModal";
 
 interface AuthContextType {
   user: any | null;
@@ -33,10 +34,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setRoles([]);
       }
-    } catch (e) {
+    } catch (e: any) {
       setUser(null);
       setRoles([]);
-      localStorage.removeItem('auth_token');
+      const errorMsg = e.response?.data?.error || '';
+      if (errorMsg.includes('ระงับ')) {
+        dispatchSuspended(); // removes token + shows modal (one-shot guard inside)
+      } else {
+        localStorage.removeItem('auth_token');
+      }
     } finally {
       setLoading(false);
     }
@@ -44,6 +50,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshUser();
+
+    // Poll every 30 seconds to detect real-time suspension by admin
+    const intervalId = setInterval(() => {
+      const token = localStorage.getItem('auth_token');
+      if (token) refreshUser();
+    }, 30_000);
+
+    // Also re-check immediately when user switches back to this tab
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const token = localStorage.getItem('auth_token');
+        if (token) refreshUser();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, []);
 
   const signIn = async (username: string, password: string) => {

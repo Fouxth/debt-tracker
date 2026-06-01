@@ -44,6 +44,7 @@ function LoanDetail() {
   const [uploading, setUploading] = useState(false);
   const [open, setOpen] = useState(false);
   const { lending } = useSettings();
+  const [openMobile, setOpenMobile] = useState(false);
 
   const load = async () => {
     try {
@@ -149,6 +150,7 @@ function LoanDetail() {
     }
   };
 
+
   return (
     <div className="animate-in fade-in duration-500">
       <Link to="/loans">
@@ -196,7 +198,36 @@ function LoanDetail() {
         }
       />
 
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3 pb-10">
+      {/* ─── MOBILE STICKY ACTION BAR ─────────────────────── */}
+      <div className="fixed bottom-[64px] left-0 right-0 z-40 md:hidden px-4 pb-3">
+        <div className="flex gap-3 rounded-2xl bg-background/90 backdrop-blur-xl border border-border shadow-2xl p-3">
+          <Dialog open={openMobile} onOpenChange={setOpenMobile}>
+            <DialogTrigger asChild>
+              <Button className="flex-1 h-12 rounded-xl font-bold shadow-[var(--shadow-elevated)] gap-2">
+                <Plus className="h-4 w-4" strokeWidth={2.5} />
+                รับชำระเงิน
+              </Button>
+            </DialogTrigger>
+            <PaymentForm 
+              loanId={loanId} 
+              suggested={Number(loan.installmentAmount)} 
+              nextNum={payments.length + 1} 
+              isInterestOnly={loan.isInterestOnly}
+              onDone={() => { setOpenMobile(false); load(); }} 
+            />
+          </Dialog>
+          <Button
+            variant="outline"
+            className="h-12 w-12 rounded-xl shrink-0 border-border/60"
+            onClick={() => document.getElementById('photo-upload')?.click()}
+            disabled={uploading}
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3 pb-44 md:pb-10">
         <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-elevated)] lg:col-span-1">
           <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-muted-foreground border-b border-border pb-2">สรุปข้อมูลสัญญา</h3>
           <dl className="space-y-3 text-sm">
@@ -365,30 +396,35 @@ function LoanDetail() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {attachments.map((att) => (
-              <div key={att.id} className="relative group aspect-square rounded-xl overflow-hidden border border-border shadow-sm">
-                <a 
-                  href={`${import.meta.env.VITE_API_URL || 'http://localhost:9876'}/${att.filePath}`} 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="block w-full h-full"
-                >
-                  <img 
-                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:9876'}/${att.filePath}`} 
-                    alt={att.fileName} 
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                  />
-                </a>
-                <Button 
-                  variant="destructive" 
-                  size="icon" 
-                  onClick={() => removeAttachment(att.id)}
-                  className="absolute top-2 right-2 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+            {attachments.map((att) => {
+              const imageUrl = att.filePath.startsWith('http://') || att.filePath.startsWith('https://')
+                ? att.filePath
+                : `${import.meta.env.VITE_API_URL || 'http://localhost:9876'}/${att.filePath}`;
+              return (
+                <div key={att.id} className="relative group aspect-square rounded-xl overflow-hidden border border-border shadow-sm">
+                  <a 
+                    href={imageUrl} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="block w-full h-full"
+                  >
+                    <img 
+                      src={imageUrl} 
+                      alt={att.fileName} 
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    />
+                  </a>
+                  <Button 
+                    variant="destructive" 
+                    size="icon" 
+                    onClick={() => removeAttachment(att.id)}
+                    className="absolute top-2 right-2 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

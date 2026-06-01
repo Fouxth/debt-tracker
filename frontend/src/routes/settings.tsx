@@ -433,7 +433,7 @@ function Settings() {
                   <Input 
                     value={business.nameEN} 
                     onChange={(e) => setBusiness({...business, nameEN: e.target.value})}
-                    placeholder="e.g. LoanDesk Pro" 
+                    placeholder="e.g. D4-LoanDesk" 
                     className="h-11 rounded-xl bg-muted/20" 
                   />
                 </div>

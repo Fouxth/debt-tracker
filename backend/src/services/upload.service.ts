@@ -22,6 +22,11 @@ export async function dbDeleteAttachment(id: string) {
   const [attachment] = await sql`SELECT * FROM loan_attachments WHERE id = ${id}`;
   if (!attachment) throw new Error("Attachment not found");
 
+  // If it's a Discord URL, skip local disk removal
+  if (attachment.filePath.startsWith('http://') || attachment.filePath.startsWith('https://')) {
+    return await sql`DELETE FROM loan_attachments WHERE id = ${id}`;
+  }
+
   // Remove file from disk
   const fullPath = path.resolve(process.cwd(), attachment.filePath);
   if (!fullPath.startsWith(`${uploadsRoot}${path.sep}`)) {

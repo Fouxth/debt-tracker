@@ -1,34 +1,35 @@
 import sql from '../db';
 import { sendLineNotify } from './line.service';
 
-export async function getAllLoans() {
+export async function getAllLoans(tenantId: string) {
   return await sql`
     SELECT l.*, c.full_name as customer_name 
     FROM loans l
     JOIN customers c ON l.customer_id = c.id
+    WHERE l.tenant_id = ${tenantId}
     ORDER BY l.created_at DESC
   `;
 }
 
-export async function getLoanById(id: string) {
+export async function getLoanById(id: string, tenantId: string) {
   const [loan] = await sql`
     SELECT l.*, c.full_name as customer_name, c.phone as customer_phone
     FROM loans l
     JOIN customers c ON l.customer_id = c.id
-    WHERE l.id = ${id}
+    WHERE l.id = ${id} AND l.tenant_id = ${tenantId}
   `;
   return loan;
 }
 
-export async function dbCreateLoan(data: any, loanNumber: string, userId: string) {
+export async function dbCreateLoan(data: any, loanNumber: string, userId: string, tenantId: string) {
   const result = await sql`
-    INSERT INTO loans ${sql({ ...data, loanNumber, createdBy: userId })}
+    INSERT INTO loans ${sql({ ...data, loanNumber, createdBy: userId, tenantId })}
     RETURNING *
   `;
   
   if (result.length > 0) {
     const loan = result[0];
-    const customers = await sql`SELECT full_name FROM customers WHERE id = ${loan.customerId}`;
+    const customers = await sql`SELECT full_name FROM customers WHERE id = ${loan.customerId} AND tenant_id = ${tenantId}`;
     if (customers.length > 0) {
       const customer = customers[0];
       const formattedPrincipal = Number(loan.principal).toLocaleString('en-US', {minimumFractionDigits: 2});
@@ -48,7 +49,7 @@ export async function dbCreateLoan(data: any, loanNumber: string, userId: string
           { label: 'วันที่ครบกำหนด', value: dueDate, color: '#f59e0b' }
         ],
         footer: 'อนุมัติและบันทึกเข้าระบบแล้ว'
-      });
+      }, tenantId);
     }
   }
   
@@ -62,32 +63,32 @@ function getLogicalDateStr(d: Date): string {
   return `${thaiTime.getFullYear()}-${String(thaiTime.getMonth() + 1).padStart(2, '0')}-${String(thaiTime.getDate()).padStart(2, '0')}`;
 }
 
-export async function getOverdueNotifications() {
+export async function getOverdueNotifications(tenantId: string) {
   const today = getLogicalDateStr(new Date());
   return await sql`
     SELECT l.id, l.loan_number, l.due_date, l.total_payable, l.status, c.full_name as customer_name
     FROM loans l
     JOIN customers c ON l.customer_id = c.id
-    WHERE l.status IN ('active', 'overdue') AND l.due_date <= ${today}
+    WHERE l.status IN ('active', 'overdue') AND l.due_date <= ${today} AND l.tenant_id = ${tenantId}
     ORDER BY l.due_date ASC
     LIMIT 15
   `;
 }
 
-export async function getLoansByCustomerId(customerId: string) {
+export async function getLoansByCustomerId(customerId: string, tenantId: string) {
   return await sql`
     SELECT * FROM loans 
-    WHERE customer_id = ${customerId}
+    WHERE customer_id = ${customerId} AND tenant_id = ${tenantId}
     ORDER BY created_at DESC
   `;
 }
 
-export async function dbRefinanceLoan(oldLoanId: string, newData: any, newLoanNumber: string, userId: string) {
+export async function dbRefinanceLoan(oldLoanId: string, newData: any, newLoanNumber: string, userId: string, tenantId: string) {
   return await sql.begin(async sql => {
-    const [oldLoan] = await sql`SELECT * FROM loans WHERE id = ${oldLoanId}`;
+    const [oldLoan] = await sql`SELECT * FROM loans WHERE id = ${oldLoanId} AND tenant_id = ${tenantId}`;
     if (!oldLoan) throw new Error("Loan not found");
 
-    await sql`UPDATE loans SET status = 'refinanced' WHERE id = ${oldLoanId}`;
+    await sql`UPDATE loans SET status = 'refinanced' WHERE id = ${oldLoanId} AND tenant_id = ${tenantId}`;
 
     const [newLoan] = await sql`
       INSERT INTO loans ${sql({
@@ -109,7 +110,8 @@ export async function dbRefinanceLoan(oldLoanId: string, newData: any, newLoanNu
         is_pawn: newData.isPawn ?? oldLoan.is_pawn,
         pawn_item: newData.pawnItem ?? oldLoan.pawn_item,
         pawn_status: newData.pawnStatus ?? oldLoan.pawn_status,
-        createdBy: userId
+        createdBy: userId,
+        tenantId
       })}
       RETURNING *
     `;
@@ -118,19 +120,19 @@ export async function dbRefinanceLoan(oldLoanId: string, newData: any, newLoanNu
   });
 }
 
-export async function dbUpdateLoan(id: string, data: any) {
+export async function dbUpdateLoan(id: string, data: any, tenantId: string) {
   return await sql`
-    UPDATE loans SET ${sql(data)} WHERE id = ${id}
+    UPDATE loans SET ${sql(data)} WHERE id = ${id} AND tenant_id = ${tenantId}
     RETURNING *
   `;
 }
 
-export async function dbDeleteLoan(id: string) {
+export async function dbDeleteLoan(id: string, tenantId: string) {
   const loans = await sql`
     SELECT l.loan_number, c.full_name as customer_name, l.principal
     FROM loans l
     JOIN customers c ON l.customer_id = c.id
-    WHERE l.id = ${id}
+    WHERE l.id = ${id} AND l.tenant_id = ${tenantId}
   `;
 
   if (loans.length === 0) throw new Error("Loan not found");
@@ -138,10 +140,10 @@ export async function dbDeleteLoan(id: string) {
 
   return await sql.begin(async sql => {
     // Clear references from other loans (refinanced chains)
-    await sql`UPDATE loans SET refinanced_from = NULL WHERE refinanced_from = ${id}`;
+    await sql`UPDATE loans SET refinanced_from = NULL WHERE refinanced_from = ${id} AND tenant_id = ${tenantId}`;
     
-    await sql`DELETE FROM payments WHERE loan_id = ${id}`;
-    const result = await sql`DELETE FROM loans WHERE id = ${id}`;
+    await sql`DELETE FROM payments WHERE loan_id = ${id} AND tenant_id = ${tenantId}`;
+    const result = await sql`DELETE FROM loans WHERE id = ${id} AND tenant_id = ${tenantId}`;
 
     const formattedPrincipal = Number(loan.principal).toLocaleString('en-US', {minimumFractionDigits: 2});
     const message = `🚨 แจ้งเตือนการลบสัญญา\n👤 ลูกค้า: ${loan.customerName}\n📝 สัญญา: ${loan.loanNumber}\n💸 ยอดเงินต้น: ${formattedPrincipal} บาท`;
@@ -154,8 +156,9 @@ export async function dbDeleteLoan(id: string) {
         { label: 'ยอดเงินต้น', value: `${formattedPrincipal} บาท` }
       ],
       footer: 'มีการลบข้อมูลนี้ออกจากระบบ'
-    });
+    }, tenantId);
 
     return result;
   });
 }
+

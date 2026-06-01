@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import * as authService from '../services/auth.service';
 import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 import { getJwtSecret } from '../utils/jwt';
+import sql from '../db';
 
 const router = Router();
 
@@ -22,7 +23,13 @@ router.post('/login', async (req: any, res) => {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    const token = jwt.sign({ userId: user.id }, getJwtSecret(), { expiresIn: '7d' });
+    // Verify if the tenant is active
+    const [tenant] = await sql`SELECT is_active FROM tenants WHERE id = ${user.tenantId}`;
+    if (tenant && tenant.isActive === false) {
+      return res.status(403).json({ error: 'บัญชีร้านค้าถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบเพื่อปลดล็อก' });
+    }
+
+    const token = jwt.sign({ userId: user.id, tenantId: user.tenantId || 'bkj' }, getJwtSecret(), { expiresIn: '7d' });
     
     // Auto-detect if we should use Secure/SameSite=None
     // In production/HTTPS, we MUST use SameSite=None to support mobile and cross-site access
@@ -42,7 +49,8 @@ router.post('/login', async (req: any, res) => {
       token,
       user: {
         id: user.id,
-        username: user.username
+        username: user.username,
+        tenantId: user.tenantId || 'bkj'
       }
     });
   } catch (e: any) {
@@ -57,7 +65,7 @@ router.post('/signup', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await authService.createUser(username, passwordHash, fullName);
 
-    const token = jwt.sign({ userId: user.id }, getJwtSecret(), { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id, tenantId: user.tenantId || 'bkj' }, getJwtSecret(), { expiresIn: '7d' });
     
     const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
     const useSecure = isHttps || (process.env.NODE_ENV === 'production');
@@ -76,7 +84,8 @@ router.post('/signup', async (req, res) => {
       token,
       user: {
         id: user.id,
-        username: user.username
+        username: user.username,
+        tenantId: user.tenantId || 'bkj'
       }
     });
   } catch (e: any) {
@@ -105,11 +114,18 @@ router.get('/me', authenticate, async (req: AuthRequest, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
+    
+    // Kick out user if their tenant has been suspended
+    if (user.tenantIsActive === false) {
+      return res.status(403).json({ error: 'บัญชีร้านค้าถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ' });
+    }
     const roles = await authService.getUserRoles(req.userId!);
     res.json({
       user: {
         id: user.id,
         username: user.username,
+        tenantId: user.tenantId || 'bkj',
+        tenantName: user.tenantName || 'D4-LoanDesk',
         user_metadata: { full_name: user.fullName, avatar_url: user.avatarUrl }
       },
       roles

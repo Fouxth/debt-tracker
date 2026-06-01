@@ -12,11 +12,13 @@ export async function sendLineNotify(
     items: { label: string; value: string; color?: string }[];
     footer?: string;
     accentColor?: string;
-  }
+  },
+  tenantId?: string
 ) {
   try {
-    // 1. Load settings from DB
-    const settings = await sql`SELECT value FROM settings WHERE key = 'line_notify'`;
+    // 1. Load settings from DB for this tenant
+    const targetTenant = tenantId || 'bkj';
+    const settings = await sql`SELECT value FROM settings WHERE key = 'line_notify' AND tenant_id = ${targetTenant}`;
     if (!settings || settings.length === 0) return;
     
     const config = settings[0].value;

@@ -1,77 +1,80 @@
 import sql from '../db';
 import { sendLineNotify } from './line.service';
 
-export async function dbGetPayments() {
+export async function dbGetPayments(tenantId: string) {
   return await sql`
     SELECT p.*, l.loan_number, c.full_name as customer_name
     FROM payments p
     JOIN loans l ON p.loan_id = l.id
     JOIN customers c ON l.customer_id = c.id
+    WHERE p.tenant_id = ${tenantId}
     ORDER BY p.payment_date DESC
   `;
 }
-export async function dbGetPaymentsByLoan(loanId: string) {
+
+export async function dbGetPaymentsByLoan(loanId: string, tenantId: string) {
   return await sql`
     SELECT * FROM payments 
-    WHERE loan_id = ${loanId}
+    WHERE loan_id = ${loanId} AND tenant_id = ${tenantId}
     ORDER BY payment_date DESC
   `;
 }
-export async function dbCreatePayment(data: any, userId: string) {
+
+export async function dbCreatePayment(data: any, userId: string, tenantId: string) {
   const result = await sql`
-    INSERT INTO payments ${sql({ ...data, createdBy: userId })}
+    INSERT INTO payments ${sql({ ...data, createdBy: userId, tenantId })}
     RETURNING *
   `;
   
-    if (result.length > 0) {
-      const payment = result[0];
-      const loans = await sql`
-        SELECT l.*, c.full_name as customer_name
-        FROM loans l
-        JOIN customers c ON l.customer_id = c.id
-        WHERE l.id = ${payment.loanId}
-      `;
+  if (result.length > 0) {
+    const payment = result[0];
+    const loans = await sql`
+      SELECT l.*, c.full_name as customer_name
+      FROM loans l
+      JOIN customers c ON l.customer_id = c.id
+      WHERE l.id = ${payment.loanId} AND l.tenant_id = ${tenantId}
+    `;
+    
+    if (loans.length > 0) {
+      const loan = loans[0];
       
-      if (loans.length > 0) {
-        const loan = loans[0];
-        
-        // Calculate remaining balance
-        const allPayments = await sql`SELECT amount FROM payments WHERE loan_id = ${payment.loanId}`;
-        const totalPaid = allPayments.reduce((acc, p) => acc + Number(p.amount), 0);
-        const remaining = Math.max(Number(loan.isInterestOnly ? loan.principal : loan.totalPayable) - totalPaid, 0);
+      // Calculate remaining balance
+      const allPayments = await sql`SELECT amount FROM payments WHERE loan_id = ${payment.loanId} AND tenant_id = ${tenantId}`;
+      const totalPaid = allPayments.reduce((acc, p) => acc + Number(p.amount), 0);
+      const remaining = Math.max(Number(loan.isInterestOnly ? loan.principal : loan.totalPayable) - totalPaid, 0);
 
-        const formattedAmount = Number(payment.amount).toLocaleString('en-US', {minimumFractionDigits: 2});
-        const formattedRemaining = remaining.toLocaleString('en-US', {minimumFractionDigits: 2});
-        
-        const message = `🔔 แจ้งเตือนรับชำระเงิน\n👤 ลูกค้า: ${loan.customerName}\n💰 ยอดชำระ: ${formattedAmount} บาท\n📉 คงเหลือ: ${formattedRemaining} บาท`;
-        
-        sendLineNotify(message, 'payment', {
-          title: '🔔 รับชำระเงินเรียบร้อย',
-          accentColor: '#10b981',
-          items: [
-            { label: 'ลูกค้า', value: loan.customerName },
-            { label: 'เลขที่สัญญา', value: loan.loanNumber },
-            { label: 'ยอดเงินชำระ', value: `${formattedAmount} บาท`, color: '#10b981' },
-            { label: 'ยอดคงเหลือรวม', value: `${formattedRemaining} บาท`, color: '#ef4444' }
-          ],
-          footer: 'ตรวจสอบยอดในแอปได้ทันที'
-        });
-      }
+      const formattedAmount = Number(payment.amount).toLocaleString('en-US', {minimumFractionDigits: 2});
+      const formattedRemaining = remaining.toLocaleString('en-US', {minimumFractionDigits: 2});
+      
+      const message = `🔔 แจ้งเตือนรับชำระเงิน\n👤 ลูกค้า: ${loan.customerName}\n💰 ยอดชำระ: ${formattedAmount} บาท\n📉 คงเหลือ: ${formattedRemaining} บาท`;
+      
+      sendLineNotify(message, 'payment', {
+        title: '🔔 รับชำระเงินเรียบร้อย',
+        accentColor: '#10b981',
+        items: [
+          { label: 'ลูกค้า', value: loan.customerName },
+          { label: 'เลขที่สัญญา', value: loan.loanNumber },
+          { label: 'ยอดเงินชำระ', value: `${formattedAmount} บาท`, color: '#10b981' },
+          { label: 'ยอดคงเหลือรวม', value: `${formattedRemaining} บาท`, color: '#ef4444' }
+        ],
+        footer: 'ตรวจสอบยอดในแอปได้ทันที'
+      }, tenantId);
     }
+  }
   
   return result;
 }
 
-export async function dbDeletePayment(id: string) {
+export async function dbDeletePayment(id: string, tenantId: string) {
   const payments = await sql`
     SELECT p.amount, l.loan_number, c.full_name as customer_name
     FROM payments p
     JOIN loans l ON p.loan_id = l.id
     JOIN customers c ON l.customer_id = c.id
-    WHERE p.id = ${id}
+    WHERE p.id = ${id} AND p.tenant_id = ${tenantId}
   `;
   
-  const result = await sql`DELETE FROM payments WHERE id = ${id}`;
+  const result = await sql`DELETE FROM payments WHERE id = ${id} AND tenant_id = ${tenantId}`;
   
   if (payments.length > 0) {
     const p = payments[0];
@@ -86,18 +89,19 @@ export async function dbDeletePayment(id: string) {
         { label: 'ยอดที่ถูกลบ', value: `${formattedAmount} บาท` }
       ],
       footer: 'โปรดตรวจสอบความถูกต้องทันที'
-    });
+    }, tenantId);
   }
   
   return result;
 }
 
-export async function dbGetExpenses() {
-  return await sql`SELECT * FROM expenses ORDER BY expense_date DESC`;
+export async function dbGetExpenses(tenantId: string) {
+  return await sql`SELECT * FROM expenses WHERE tenant_id = ${tenantId} ORDER BY expense_date DESC`;
 }
-export async function dbCreateExpense(data: any, userId: string) {
+
+export async function dbCreateExpense(data: any, userId: string, tenantId: string) {
   const result = await sql`
-    INSERT INTO expenses ${sql({ ...data, createdBy: userId })}
+    INSERT INTO expenses ${sql({ ...data, createdBy: userId, tenantId })}
     RETURNING *
   `;
   
@@ -116,11 +120,13 @@ export async function dbCreateExpense(data: any, userId: string) {
         { label: 'รายละเอียด', value: expense.details || '-' }
       ],
       footer: 'บันทึกรายจ่ายเข้าระบบแล้ว'
-    });
+    }, tenantId);
   }
   
   return result;
 }
-export async function dbDeleteExpense(id: string) {
-  return await sql`DELETE FROM expenses WHERE id = ${id}`;
+
+export async function dbDeleteExpense(id: string, tenantId: string) {
+  return await sql`DELETE FROM expenses WHERE id = ${id} AND tenant_id = ${tenantId}`;
 }
+

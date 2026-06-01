@@ -6,6 +6,9 @@ export const signup = (data: any) => api.post('/auth/signup', data).then(r => r.
 export const logout = () => api.post('/auth/logout').then(r => r.data);
 export const getCurrentUser = () => api.get('/auth/me').then(r => r.data);
 export const changePassword = (data: any) => api.post('/auth/change-password', data).then(r => r.data);
+export const generateTenant = (name: string) => api.post('/tenants/generate', { name }).then(r => r.data);
+export const getTenants = () => api.get('/tenants').then(r => r.data);
+export const updateTenantStatus = (id: string, isActive: boolean) => api.put(`/tenants/${id}/status`, { isActive }).then(r => r.data);
 
 // Customers
 export const getCustomers = () => api.get('/customers').then(r => r.data);

@@ -20,6 +20,7 @@ import reportRoutes from './routes/report.routes';
 import activityRoutes from './routes/activity.routes';
 import settingsRoutes from './routes/settings.routes';
 import webhookRoutes from './routes/webhook.routes';
+import tenantRoutes from './routes/tenant.routes';
 
 export function createApp() {
   const app = express();
@@ -87,6 +88,7 @@ export function createApp() {
   app.use('/api/activity', activityRoutes);
   app.use('/api/settings', settingsRoutes);
   app.use('/api/webhook', webhookRoutes);
+  app.use('/api/tenants', tenantRoutes);
 
   // Health checks
   app.get('/health', (_req, res) => {

@@ -47,31 +47,32 @@ export async function handleBotCommand(text: string, userId: string, replyToken:
     return;
   }
 
-  // 2. Security Check: Only allow configured admin
-  const settings = await sql`SELECT value FROM settings WHERE key = 'line_notify'`;
-  if (!settings || settings.length === 0) return;
-  const config = settings[0].value;
-
-  if (config.userId !== userId) {
+  // 2. Security Check: Find the tenant that owns this LINE User ID
+  const settings = await sql`
+    SELECT tenant_id, value FROM settings 
+    WHERE key = 'line_notify' AND (value->>'userId') = ${userId}
+  `;
+  if (!settings || settings.length === 0) {
     // Unauthorized user, silently ignore to prevent spam
     return;
   }
+  const tenantId = settings[0].tenantId;
 
   // 3. Process Commands
   try {
     if (lowerCmd === 'สรุป' || lowerCmd === 'summary') {
-      await handleSummary(replyToken);
+      await handleSummary(replyToken, tenantId);
     } 
     else if (lowerCmd === 'ค้างชำระ' || lowerCmd === 'overdue') {
-      await handleOverdue(replyToken);
+      await handleOverdue(replyToken, tenantId);
     }
     else if (lowerCmd === 'เก็บวันนี้' || lowerCmd === 'today') {
-      await handleCollectToday(replyToken);
+      await handleCollectToday(replyToken, tenantId);
     }
     else if (lowerCmd.startsWith('ยอด ')) {
       const searchName = cmd.substring(4).trim();
       if (searchName) {
-        await handleCustomerSearch(replyToken, searchName);
+        await handleCustomerSearch(replyToken, searchName, tenantId);
       } else {
         await replyLineMessage(replyToken, [{ type: 'text', text: 'กรุณาระบุชื่อลูกค้า เช่น: ยอด สมชาย' }]);
       }
@@ -95,14 +96,14 @@ export async function handleBotCommand(text: string, userId: string, replyToken:
 /**
  * Command: สรุป
  */
-async function handleSummary(replyToken: string) {
+async function handleSummary(replyToken: string, tenantId: string) {
   // Get today's logical date in local timezone
   const today = new Date().toISOString().split('T')[0];
 
   const [[payments], [loans], [expenses]] = await Promise.all([
-    sql`SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE payment_date = ${today}`,
-    sql`SELECT COALESCE(SUM(principal), 0) as total FROM loans WHERE DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok') = ${today}`,
-    sql`SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE expense_date = ${today}`
+    sql`SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE payment_date = ${today} AND tenant_id = ${tenantId}`,
+    sql`SELECT COALESCE(SUM(principal), 0) as total FROM loans WHERE DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Bangkok') = ${today} AND tenant_id = ${tenantId}`,
+    sql`SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE expense_date = ${today} AND tenant_id = ${tenantId}`
   ]);
 
   const totalCollected = Number(payments?.total || 0);
@@ -165,11 +166,11 @@ async function handleSummary(replyToken: string) {
 /**
  * Command: ยอด <ชื่อ>
  */
-async function handleCustomerSearch(replyToken: string, name: string) {
+async function handleCustomerSearch(replyToken: string, name: string, tenantId: string) {
   const customers = await sql`
     SELECT id, full_name, phone 
     FROM customers 
-    WHERE full_name ILIKE ${'%' + name + '%'} 
+    WHERE full_name ILIKE ${'%' + name + '%'} AND tenant_id = ${tenantId}
     LIMIT 3
   `;
 
@@ -183,7 +184,7 @@ async function handleCustomerSearch(replyToken: string, name: string) {
   for (const customer of customers) {
     const loans = await sql`
       SELECT * FROM loans 
-      WHERE customer_id = ${customer.id} AND status IN ('active', 'overdue')
+      WHERE customer_id = ${customer.id} AND status IN ('active', 'overdue') AND tenant_id = ${tenantId}
     `;
 
     if (loans.length === 0) {
@@ -195,7 +196,7 @@ async function handleCustomerSearch(replyToken: string, name: string) {
     const loanDetails = [];
 
     for (const loan of loans) {
-      const allPayments = await sql`SELECT amount FROM payments WHERE loan_id = ${loan.id}`;
+      const allPayments = await sql`SELECT amount FROM payments WHERE loan_id = ${loan.id} AND tenant_id = ${tenantId}`;
       const totalPaid = allPayments.reduce((acc: number, p: any) => acc + Number(p.amount), 0);
       const remaining = Math.max(Number(loan.isInterestOnly ? loan.principal : loan.totalPayable) - totalPaid, 0);
       
@@ -250,14 +251,14 @@ async function handleCustomerSearch(replyToken: string, name: string) {
 /**
  * Command: ค้างชำระ
  */
-async function handleOverdue(replyToken: string) {
+async function handleOverdue(replyToken: string, tenantId: string) {
   const today = new Date().toISOString().split('T')[0];
   
   const overdueLoans = await sql`
     SELECT l.*, c.full_name as customer_name
     FROM loans l
     JOIN customers c ON l.customer_id = c.id
-    WHERE l.status IN ('active', 'overdue') AND l.due_date < ${today}
+    WHERE l.status IN ('active', 'overdue') AND l.due_date < ${today} AND l.tenant_id = ${tenantId}
     ORDER BY l.due_date ASC
     LIMIT 10
   `;
@@ -309,7 +310,7 @@ async function handleOverdue(replyToken: string) {
 /**
  * Command: เก็บวันนี้
  */
-async function handleCollectToday(replyToken: string) {
+async function handleCollectToday(replyToken: string, tenantId: string) {
   const today = new Date().toISOString().split('T')[0];
   
   // Find active loans that haven't paid today
@@ -317,10 +318,10 @@ async function handleCollectToday(replyToken: string) {
     SELECT l.*, c.full_name as customer_name
     FROM loans l
     JOIN customers c ON l.customer_id = c.id
-    WHERE l.status IN ('active', 'overdue')
+    WHERE l.status IN ('active', 'overdue') AND l.tenant_id = ${tenantId}
       AND NOT EXISTS (
         SELECT 1 FROM payments p 
-        WHERE p.loan_id = l.id AND p.payment_date = ${today}
+        WHERE p.loan_id = l.id AND p.payment_date = ${today} AND p.tenant_id = ${tenantId}
       )
     ORDER BY l.created_at ASC
     LIMIT 20
@@ -335,7 +336,7 @@ async function handleCollectToday(replyToken: string) {
   
   for (const loan of pendingLoans) {
     // Calculate total paid to find remaining installments
-    const allPayments = await sql`SELECT amount FROM payments WHERE loan_id = ${loan.id}`;
+    const allPayments = await sql`SELECT amount FROM payments WHERE loan_id = ${loan.id} AND tenant_id = ${tenantId}`;
     const totalPaid = allPayments.reduce((acc: number, p: any) => acc + Number(p.amount), 0);
     
     let typeText = '';

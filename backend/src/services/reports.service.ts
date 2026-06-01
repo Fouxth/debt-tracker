@@ -20,16 +20,16 @@ function toDateStr(d: any): string {
   return String(d).split('T')[0];
 }
 
-export async function fetchDashboardRawData(monthStartStr?: string) {
+export async function fetchDashboardRawData(tenantId: string, monthStartStr?: string) {
   const monthStart = monthStartStr || getDefaultMonthStart();
   const today = getLogicalDateStr(new Date());
 
   const [custCountRes, loans, payments, expenses, settingsRes] = await Promise.all([
-    sql`SELECT count(*) as count FROM customers`,
-    sql`SELECT id, status, total_payable, due_date, principal, is_interest_only, is_indefinite FROM loans`,
-    sql`SELECT loan_id, amount, payment_date, category FROM payments`,
-    sql`SELECT amount, expense_date FROM expenses WHERE expense_date >= ${monthStart}`,
-    sql`SELECT value FROM settings WHERE key = 'lending_config'`
+    sql`SELECT count(*) as count FROM customers WHERE tenant_id = ${tenantId}`,
+    sql`SELECT id, status, total_payable, due_date, principal, is_interest_only, is_indefinite FROM loans WHERE tenant_id = ${tenantId}`,
+    sql`SELECT loan_id, amount, payment_date, category FROM payments WHERE tenant_id = ${tenantId}`,
+    sql`SELECT amount, expense_date FROM expenses WHERE expense_date >= ${monthStart} AND tenant_id = ${tenantId}`,
+    sql`SELECT value FROM settings WHERE key = 'lending_config' AND tenant_id = ${tenantId}`
   ]);
 
   const lendingConfig = settingsRes[0]?.value || {};
@@ -129,7 +129,7 @@ export async function fetchDashboardRawData(monthStartStr?: string) {
   };
 }
 
-export async function fetchReportRawData(ms?: string) {
+export async function fetchReportRawData(tenantId: string, ms?: string) {
   const monthStart = ms || getDefaultMonthStart();
   const today = getLogicalDateStr(new Date());
 
@@ -137,11 +137,12 @@ export async function fetchReportRawData(ms?: string) {
     sql`SELECT p.loan_id, p.amount, p.payment_date, p.category, c.full_name as customer_name
         FROM payments p
         JOIN loans l ON p.loan_id = l.id
-        JOIN customers c ON l.customer_id = c.id`,
-    sql`SELECT amount, expense_date FROM expenses WHERE expense_date >= ${monthStart}`,
-    sql`SELECT id, customer_id, total_payable, due_date, status, principal, is_interest_only, is_indefinite FROM loans`,
-    sql`SELECT id, full_name FROM customers`,
-    sql`SELECT value FROM settings WHERE key = 'lending_config'`
+        JOIN customers c ON l.customer_id = c.id
+        WHERE p.tenant_id = ${tenantId}`,
+    sql`SELECT amount, expense_date FROM expenses WHERE expense_date >= ${monthStart} AND tenant_id = ${tenantId}`,
+    sql`SELECT id, customer_id, total_payable, due_date, status, principal, is_interest_only, is_indefinite FROM loans WHERE tenant_id = ${tenantId}`,
+    sql`SELECT id, full_name FROM customers WHERE tenant_id = ${tenantId}`,
+    sql`SELECT value FROM settings WHERE key = 'lending_config' AND tenant_id = ${tenantId}`
   ]);
 
   const lendingConfig = settingsRes[0]?.value || {};

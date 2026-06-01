@@ -3,6 +3,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { Toaster } from "@/components/ui/sonner";
+import { SuspendedModal } from "@/components/SuspendedModal";
 
 function NotFoundComponent() {
   return (
@@ -34,12 +35,13 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <ThemeProvider>
-      <SettingsProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <SettingsProvider>
           <Outlet />
           <Toaster richColors position="top-right" />
-        </AuthProvider>
-      </SettingsProvider>
+          <SuspendedModal />
+        </SettingsProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

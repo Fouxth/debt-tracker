@@ -1,0 +1,142 @@
+import sql from '../db';
+
+const DISCORD_API_BASE = 'https://discord.com/api/v10';
+
+/**
+ * Get HTTP Headers required to call Discord API
+ */
+function getDiscordHeaders() {
+  const token = process.env.DISCORD_BOT_TOKEN;
+  if (!token) {
+    throw new Error('Missing DISCORD_BOT_TOKEN in environment settings');
+  }
+  return {
+    'Authorization': `Bot ${token}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+/**
+ * Ensures a Text Channel named after the tenantId exists within the specified Discord Guild.
+ * If it doesn't exist, it creates one and returns its Channel ID.
+ */
+export async function getOrCreateTenantChannel(tenantId: string): Promise<string> {
+  const guildId = process.env.DISCORD_GUILD_ID;
+  if (!guildId) {
+    throw new Error('Missing DISCORD_GUILD_ID in environment settings');
+  }
+
+  // 1. Check if we already have the channel ID cached in database settings
+  const settingsKey = `discord_channel_id`;
+  const cachedSettings = await sql`
+    SELECT value FROM settings WHERE tenant_id = ${tenantId} AND key = ${settingsKey}
+  `;
+
+  if (cachedSettings && cachedSettings.length > 0 && cachedSettings[0].value?.channelId) {
+    return cachedSettings[0].value.channelId;
+  }
+
+  // 2. Normalize channel name (Discord channel names must be lowercase, alphanumeric/dashes)
+  const channelName = tenantId.toLowerCase().replace(/[^a-z0-9-_]/g, '');
+
+  console.log(`[Discord] Checking channels in guild ${guildId} for name: ${channelName}`);
+  
+  // 3. Fetch list of channels from Guild
+  const channelsResponse = await fetch(`${DISCORD_API_BASE}/guilds/${guildId}/channels`, {
+    method: 'GET',
+    headers: getDiscordHeaders(),
+  });
+
+  if (!channelsResponse.ok) {
+    const errorText = await channelsResponse.text();
+    throw new Error(`Failed to fetch Discord channels: ${channelsResponse.status} - ${errorText}`);
+  }
+
+  const channels = await channelsResponse.json();
+  let targetChannel = channels.find((c: any) => c.name === channelName && c.type === 0); // type 0 is GUILD_TEXT
+
+  // 4. Create channel if not found
+  if (!targetChannel) {
+    console.log(`[Discord] Channel #${channelName} not found. Creating one...`);
+    const createResponse = await fetch(`${DISCORD_API_BASE}/guilds/${guildId}/channels`, {
+      method: 'POST',
+      headers: getDiscordHeaders(),
+      body: JSON.stringify({
+        name: channelName,
+        type: 0, // Text Channel
+        topic: `Storage channel for tenant ${tenantId}`,
+      }),
+    });
+
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text();
+      throw new Error(`Failed to create Discord channel: ${createResponse.status} - ${errorText}`);
+    }
+
+    targetChannel = await createResponse.json();
+    console.log(`[Discord] Successfully created channel #${channelName} with ID ${targetChannel.id}`);
+  } else {
+    console.log(`[Discord] Found existing channel #${channelName} with ID ${targetChannel.id}`);
+  }
+
+  // 5. Cache the Channel ID in DB settings for high efficiency
+  await sql`
+    INSERT INTO settings (tenant_id, key, value, updated_at)
+    VALUES (${tenantId}, ${settingsKey}, ${JSON.stringify({ channelId: targetChannel.id })}, CURRENT_TIMESTAMP)
+    ON CONFLICT (tenant_id, key) DO UPDATE 
+    SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at
+  `;
+
+  return targetChannel.id;
+}
+
+/**
+ * Uploads a file (Buffer) to the tenant's dedicated Discord channel
+ * @returns The CDN URL of the uploaded image
+ */
+export async function uploadFileToDiscord(
+  tenantId: string, 
+  fileBuffer: Buffer, 
+  fileName: string, 
+  mimeType: string,
+  customizedMessage?: string
+): Promise<string> {
+  const channelId = await getOrCreateTenantChannel(tenantId);
+  console.log(`[Discord] Uploading file ${fileName} (${mimeType}) to channel ${channelId}`);
+
+  // We need to construct a multipart/form-data request manually or using FormData
+  const formData = new FormData();
+  // Safe Node Buffer to Blob conversion
+  const blob = new Blob([new Uint8Array(fileBuffer)], { type: mimeType });
+  formData.append('files[0]', blob, fileName);
+  
+  // Discord requires payload_json if we want to add content/embeds, otherwise we can just upload files
+  formData.append('payload_json', JSON.stringify({
+    content: customizedMessage || `📎 อัปโหลดรูปภาพหลักฐานจากระบบของ ${tenantId} (${new Date().toLocaleString('th-TH')})`,
+  }));
+
+  const token = process.env.DISCORD_BOT_TOKEN;
+  const response = await fetch(`${DISCORD_API_BASE}/channels/${channelId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bot ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to upload to Discord: ${response.status} - ${errorText}`);
+  }
+
+  const message = await response.json();
+  const attachment = message.attachments?.[0];
+
+  if (!attachment || !attachment.url) {
+    throw new Error('Discord response did not contain any valid attachment URLs');
+  }
+
+  // Return the direct CDN link
+  console.log(`[Discord] ✅ Upload complete! URL: ${attachment.url}`);
+  return attachment.url;
+}

@@ -7,7 +7,7 @@ const router = Router();
 router.use(authenticate);
 
 // Get activity logs with user info joined
-router.get('/', async (req, res) => {
+router.get('/', async (req: any, res) => {
   try {
     const logs = await sql`
       SELECT 
@@ -20,6 +20,7 @@ router.get('/', async (req, res) => {
         p.full_name as user_name
       FROM activity_logs a
       LEFT JOIN profiles p ON p.id = a.user_id
+      WHERE a.tenant_id = ${req.tenantId!}
       ORDER BY a.created_at DESC
       LIMIT 100
     `;
@@ -34,8 +35,8 @@ router.post('/', async (req: any, res) => {
   const { action, entityType, entityId, details } = req.body;
   try {
     await sql`
-      INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details)
-      VALUES (${req.userId}, ${action}, ${entityType ?? null}, ${entityId ?? null}, ${details ? JSON.stringify(details) : null})
+      INSERT INTO activity_logs (user_id, action, entity_type, entity_id, details, tenant_id)
+      VALUES (${req.userId}, ${action}, ${entityType ?? null}, ${entityId ?? null}, ${details ? JSON.stringify(details) : null}, ${req.tenantId!})
     `;
     res.json({ success: true });
   } catch (e: any) {

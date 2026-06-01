@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SuperAdminRouteImport } from './routes/super-admin'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PaymentsRouteImport } from './routes/payments'
@@ -24,6 +25,11 @@ import { Route as CustomersIndexRouteImport } from './routes/customers.index'
 import { Route as LoansLoanIdRouteImport } from './routes/loans.$loanId'
 import { Route as CustomersIdRouteImport } from './routes/customers.$id'
 
+const SuperAdminRoute = SuperAdminRouteImport.update({
+  id: '/super-admin',
+  path: '/super-admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/payments': typeof PaymentsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
+  '/super-admin': typeof SuperAdminRoute
   '/customers/$id': typeof CustomersIdRoute
   '/loans/$loanId': typeof LoansLoanIdRoute
   '/customers/': typeof CustomersIndexRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/payments': typeof PaymentsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
+  '/super-admin': typeof SuperAdminRoute
   '/customers/$id': typeof CustomersIdRoute
   '/loans/$loanId': typeof LoansLoanIdRoute
   '/customers': typeof CustomersIndexRoute
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/payments': typeof PaymentsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
+  '/super-admin': typeof SuperAdminRoute
   '/customers/$id': typeof CustomersIdRoute
   '/loans/$loanId': typeof LoansLoanIdRoute
   '/customers/': typeof CustomersIndexRoute
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/reports'
     | '/settings'
+    | '/super-admin'
     | '/customers/$id'
     | '/loans/$loanId'
     | '/customers/'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/reports'
     | '/settings'
+    | '/super-admin'
     | '/customers/$id'
     | '/loans/$loanId'
     | '/customers'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/reports'
     | '/settings'
+    | '/super-admin'
     | '/customers/$id'
     | '/loans/$loanId'
     | '/customers/'
@@ -202,10 +214,18 @@ export interface RootRouteChildren {
   PaymentsRoute: typeof PaymentsRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
+  SuperAdminRoute: typeof SuperAdminRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/super-admin': {
+      id: '/super-admin'
+      path: '/super-admin'
+      fullPath: '/super-admin'
+      preLoaderRoute: typeof SuperAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -344,6 +364,7 @@ const rootRouteChildren: RootRouteChildren = {
   PaymentsRoute: PaymentsRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
+  SuperAdminRoute: SuperAdminRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

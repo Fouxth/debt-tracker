@@ -1,9 +1,8 @@
-import { createFileRoute, useNavigate, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Banknote, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -13,14 +12,15 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { user, loading, signIn, signUp } = useAuth();
-  const navigate = useNavigate();
+  const { user, loading, signIn } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (!loading && user) return <Navigate to="/" />;
+  if (!loading && user) {
+    const target = user.tenantId === 'system' ? '/super-admin' : '/';
+    return <Navigate to={target} />;
+  }
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,18 +29,6 @@ function LoginPage() {
     setBusy(false);
     if (error) return toast.error(error === 'Invalid username or password' ? 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' : error);
     toast.success("ยินดีต้อนรับกลับเข้าสู่ระบบ");
-    navigate({ to: "/" });
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    const { error } = await signUp(username, password, fullName);
-    setBusy(false);
-    if (error) return toast.error(error);
-    toast.success("สร้างบัญชีเรียบร้อยแล้ว — กำลังเข้าสู่ระบบ...");
-    await signIn(username, password);
-    navigate({ to: "/" });
   };
 
   return (
@@ -54,61 +42,28 @@ function LoginPage() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[var(--shadow-elevated)] ring-4 ring-primary/10">
             <Banknote className="h-8 w-8" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">LoanDesk</h1>
+          <h1 className="text-3xl font-bold tracking-tight">D4-LoanDesk</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            ระบบจัดการเงินกู้และติดตามหนี้สินมืออาชีพ
+            ระบบจัดการเงินกู้และติดตามหนี้สินมืออาชีพ (Multi-Tenant)
           </p>
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-card)] backdrop-blur-sm">
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="signin">เข้าสู่ระบบ</TabsTrigger>
-              <TabsTrigger value="signup">ลงทะเบียน</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="signin" className="animate-in fade-in slide-in-from-left-4 duration-500">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username">ชื่อผู้ใช้ (Username)</Label>
-                  <Input id="username" placeholder="admin" required value={username} onChange={(e) => setUsername(e.target.value)} className="bg-muted/30" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">รหัสผ่าน</Label>
-                  <Input id="password" type="password" placeholder="••••••••" required value={password} onChange={(e) => setPassword(e.target.value)} className="bg-muted/30" />
-                </div>
-                <Button type="submit" className="w-full py-6 text-base font-semibold shadow-[var(--shadow-elevated)]" disabled={busy}>
-                  {busy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-                  เข้าสู่ระบบ
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="signup" className="animate-in fade-in slide-in-from-right-4 duration-500">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="su-name">ชื่อ-นามสกุล</Label>
-                  <Input id="su-name" placeholder="สมชาย ใจดี" required value={fullName} onChange={(e) => setFullName(e.target.value)} className="bg-muted/30" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="su-username">ชื่อผู้ใช้ (Username)</Label>
-                  <Input id="su-username" placeholder="admin" required value={username} onChange={(e) => setUsername(e.target.value)} className="bg-muted/30" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="su-password">รหัสผ่าน</Label>
-                  <Input id="su-password" type="password" placeholder="อย่างน้อย 6 ตัวอักษร" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="bg-muted/30" />
-                </div>
-                <Button type="submit" className="w-full py-6 text-base font-semibold shadow-[var(--shadow-elevated)]" disabled={busy}>
-                  {busy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-                  สร้างบัญชีผู้ใช้
-                </Button>
-                <p className="text-center text-[10px] text-muted-foreground mt-4 px-4 leading-relaxed">
-                  ผู้ที่ลงทะเบียนคนแรกจะได้รับสิทธิ์เป็น ผู้ดูแลระบบ (Admin) <br/>
-                  ผู้ที่ลงทะเบียนคนถัดไปจะได้รับสิทธิ์เป็น เจ้าหน้าที่ (Staff)
-                </p>
-              </form>
-            </TabsContent>
-          </Tabs>
+          <h2 className="text-xl font-bold text-center mb-6">เข้าสู่ระบบ</h2>
+          <form onSubmit={handleSignIn} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">ชื่อผู้ใช้ (Username) หรือ รหัสร้าน</Label>
+              <Input id="username" placeholder="เช่น somsak-capital" required value={username} onChange={(e) => setUsername(e.target.value)} className="bg-muted/30" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">รหัสผ่าน</Label>
+              <Input id="password" type="password" placeholder="••••••••" required value={password} onChange={(e) => setPassword(e.target.value)} className="bg-muted/30" />
+            </div>
+            <Button type="submit" className="w-full py-6 text-base font-semibold shadow-[var(--shadow-elevated)]" disabled={busy}>
+              {busy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+              เข้าสู่ระบบ
+            </Button>
+          </form>
         </div>
       </div>
     </div>

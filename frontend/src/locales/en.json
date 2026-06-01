@@ -1,5 +1,5 @@
 {
-  "app_name": "LoanDesk",
+  "app_name": "D4-LoanDesk",
   "dashboard": {
     "title": "System Overview",
     "description": "Summary of your lending business data",
@@ -82,5 +82,8 @@
     "edit": "Edit",
     "delete": "Delete",
     "save": "Save"
+  },
+  "messages": {
+    "no_data": "No data available to display at this moment"
   }
 }

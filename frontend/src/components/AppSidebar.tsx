@@ -8,11 +8,12 @@ import {
   Settings,
   Calendar,
   History,
-  Languages,
+  ShieldAlert,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "@tanstack/react-router";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Sidebar,
   SidebarContent,
@@ -23,22 +24,18 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export function AppSidebar() {
   const { t, i18n } = useTranslation();
   const { business } = useSettings();
+  const { user, roles } = useAuth();
   const location = useLocation();
-
-  const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
-  };
 
   const businessName = i18n.language === 'th' ? business.nameTH : business.nameEN;
   const subName = i18n.language === 'th' ? business.nameEN : business.nameTH;
+
+  const isSuperAdmin = user && user.tenantId === "system" && roles.includes("admin");
 
   const menuItems = [
     { title: t('menu.dashboard'), icon: LayoutDashboard, url: "/" },
@@ -72,6 +69,27 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="p-2 gap-4">
+        {/* Super Admin Panel Group - Render dynamically */}
+        {isSuperAdmin && (
+          <SidebarGroup className="animate-in fade-in slide-in-from-top-2 duration-500">
+            <SidebarGroupLabel className="px-3 text-[10px] font-black uppercase tracking-[0.15em] text-red-500 mb-2 flex items-center gap-1.5">
+              <ShieldAlert className="h-3 w-3" /> Super Admin
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="แผงควบคุมระบบเครือข่าย" isActive={location.pathname === "/super-admin"}>
+                    <Link to="/super-admin" className="flex items-center gap-3 py-2.5 text-red-600 dark:text-red-400 hover:text-red-700">
+                      <Settings className="h-4 w-4" />
+                      <span className="font-bold">จัดการร้านค้าทั้งหมด</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         <SidebarGroup>
           <SidebarGroupLabel className="px-3 text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground mb-2">
             {t('menu.main')}
@@ -112,23 +130,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter className="p-4 border-t border-border bg-muted/30">
-        <div className="flex items-center justify-between w-full">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full flex justify-start gap-2 h-9">
-                <Languages className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs font-bold uppercase">{i18n.language}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-32">
-              <DropdownMenuItem onClick={() => changeLanguage('th')} className="text-xs font-bold cursor-pointer">ภาษาไทย</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeLanguage('en')} className="text-xs font-bold cursor-pointer">English</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }

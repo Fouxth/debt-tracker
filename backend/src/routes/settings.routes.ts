@@ -1,15 +1,49 @@
 import { Router } from 'express';
 import sql from '../db';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticate, AuthRequest } from '../middleware/auth.middleware';
 
 const router = Router();
 
 router.use(authenticate);
 
-// Get all settings
-router.get('/', async (_req, res) => {
+// Get all settings for the logged-in tenant
+router.get('/', async (req: AuthRequest, res) => {
   try {
-    const settings = await sql`SELECT * FROM settings`;
+    let settings = await sql`SELECT * FROM settings WHERE tenant_id = ${req.tenantId!}`;
+    
+    // Auto-seed default settings if this is a newly generated tenant with no settings
+    if (settings.length === 0 && req.tenantId! !== 'bkj') {
+      const defaultSettings = await sql`SELECT * FROM settings WHERE tenant_id = 'bkj'`;
+      for (const ds of defaultSettings) {
+        // Adjust default name to D4-LoanDesk for general defaults, or keep it generic
+        let val = ds.value;
+        if (ds.key === 'business_profile') {
+          // Reset business name to empty or default for the new tenant to customize
+          val = { ...ds.value, nameTH: '', nameEN: '', phone: '', address: '' };
+        } else if (ds.key === 'line_notify') {
+          // Reset LINE Notify credentials to prevent leakage
+          val = {
+            enabled: false,
+            token: '',
+            userId: '',
+            events: {
+              payment: true,
+              loan: true,
+              expense: true,
+              fraud: true
+            }
+          };
+        }
+        await sql`
+          INSERT INTO settings (tenant_id, key, value, updated_at)
+          VALUES (${req.tenantId!}, ${ds.key}, ${val}, CURRENT_TIMESTAMP)
+          ON CONFLICT (tenant_id, key) DO NOTHING
+        `;
+      }
+      // Re-fetch now that we seeded the defaults
+      settings = await sql`SELECT * FROM settings WHERE tenant_id = ${req.tenantId!}`;
+    }
+
     const result = settings.reduce((acc: any, curr) => {
       acc[curr.key] = curr.value;
       return acc;
@@ -20,8 +54,8 @@ router.get('/', async (_req, res) => {
   }
 });
 
-// Update specific setting
-router.post('/:key', async (req, res) => {
+// Update specific setting for the logged-in tenant
+router.post('/:key', async (req: AuthRequest, res) => {
   const { key } = req.params;
   const { value } = req.body;
   
@@ -30,9 +64,9 @@ router.post('/:key', async (req, res) => {
 
   try {
     await sql`
-      INSERT INTO settings (key, value, updated_at)
-      VALUES (${key}, ${dataToSave}, CURRENT_TIMESTAMP)
-      ON CONFLICT (key) DO 
+      INSERT INTO settings (tenant_id, key, value, updated_at)
+      VALUES (${req.tenantId!}, ${key as string}, ${dataToSave}, CURRENT_TIMESTAMP)
+      ON CONFLICT (tenant_id, key) DO 
       UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at
     `;
     res.json({ message: 'Setting updated successfully' });
@@ -42,3 +76,4 @@ router.post('/:key', async (req, res) => {
 });
 
 export default router;
+

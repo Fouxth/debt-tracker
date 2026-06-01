@@ -3,7 +3,7 @@ import sql from '../db';
 export async function getUserByUsername(username: string) {
   if (!username) return null;
   const [user] = await sql`
-    SELECT id, username, password_hash FROM users WHERE username = ${username}
+    SELECT id, username, password_hash, tenant_id FROM users WHERE username = ${username}
   `;
   return user;
 }
@@ -11,9 +11,10 @@ export async function getUserByUsername(username: string) {
 export async function getUserById(id: string) {
   if (!id) return null;
   const [user] = await sql`
-    SELECT u.id, u.username, u.password_hash, p.full_name, p.avatar_url
+    SELECT u.id, u.username, u.password_hash, u.tenant_id, t.name as tenant_name, t.is_active as tenant_is_active, p.full_name, p.avatar_url
     FROM users u
     LEFT JOIN profiles p ON p.id = u.id
+    LEFT JOIN tenants t ON t.id = u.tenant_id
     WHERE u.id = ${id}
   `;
   return user;
@@ -26,15 +27,15 @@ export async function getUserRoles(userId: string) {
   return rolesData.map((r: any) => r.role);
 }
 
-export async function createUser(username: string, passwordHash: string, fullName: string) {
+export async function createUser(username: string, passwordHash: string, fullName: string, tenantId: string = 'bkj') {
   if (!username || !passwordHash || !fullName) {
     throw new Error('Missing required fields for user creation');
   }
   return await sql.begin(async (sql: any) => {
     const [u] = await sql`
-      INSERT INTO users (username, password_hash)
-      VALUES (${username}, ${passwordHash})
-      RETURNING id
+      INSERT INTO users (username, password_hash, tenant_id)
+      VALUES (${username}, ${passwordHash}, ${tenantId})
+      RETURNING id, username, tenant_id
     `;
     
     await sql`
@@ -61,3 +62,4 @@ export async function updateUserPassword(id: string, passwordHash: string) {
     WHERE id = ${id}
   `;
 }
+
