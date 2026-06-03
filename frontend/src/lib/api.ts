@@ -7,7 +7,10 @@ const baseURL = normalized ? (normalized.endsWith('/api') ? normalized : `${norm
 
 const api = axios.create({
   baseURL,
-  withCredentials: true
+  withCredentials: true,
+  headers: {
+    'ngrok-skip-browser-warning': 'true'
+  }
 });
 
 api.interceptors.request.use((config) => {
